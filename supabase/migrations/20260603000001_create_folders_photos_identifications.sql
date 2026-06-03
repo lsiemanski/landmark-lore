@@ -87,7 +87,7 @@ CREATE OR REPLACE TRIGGER photos_updated_at
 
 -- Default folder trigger: fires when a new auth user is created
 CREATE OR REPLACE FUNCTION create_default_folder()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
   INSERT INTO public.folders (user_id, name)
   VALUES (NEW.id, 'Uncategorized');
