@@ -348,38 +348,38 @@ Every statement in both files is written to be re-runnable so a partial or repea
 
 #### Automated
 
-- [x] 1.1 `supabase db reset` exits 0
-- [x] 1.2 All three tables exist in public schema
-- [x] 1.3 RLS enabled on all three tables
-- [x] 1.4 `photo_status` enum exists
+- [x] 1.1 `supabase db reset` exits 0 — 7f8dd3e
+- [x] 1.2 All three tables exist in public schema — 7f8dd3e
+- [x] 1.3 RLS enabled on all three tables — 7f8dd3e
+- [x] 1.4 `photo_status` enum exists — 7f8dd3e
 
 #### Manual
 
-- [x] 1.5 New user signup creates "Uncategorized" folder via trigger
-- [x] 1.6 RLS verified: different user sees zero rows
+- [x] 1.5 New user signup creates "Uncategorized" folder via trigger — 7f8dd3e
+- [x] 1.6 RLS verified: different user sees zero rows — 7f8dd3e
 
 ### Phase 2: Storage Bucket and Policies
 
 #### Automated
 
-- [x] 2.1 `supabase db reset` (both migrations) exits 0
-- [x] 2.2 `photos` bucket exists and is private
-- [x] 2.3 Three storage policies exist (`photos_insert`, `photos_select`, `photos_delete`)
+- [x] 2.1 `supabase db reset` (both migrations) exits 0 — 7f8dd3e
+- [x] 2.2 `photos` bucket exists and is private — 7f8dd3e
+- [x] 2.3 Three storage policies exist (`photos_insert`, `photos_select`, `photos_delete`) — 7f8dd3e
 
 #### Manual
 
-- [x] 2.4 File upload accessible to owner, rejected for other users
-- [x] 2.5 Upload with wrong path prefix rejected
+- [x] 2.4 File upload accessible to owner, rejected for other users — 7f8dd3e
+- [x] 2.5 Upload with wrong path prefix rejected — 7f8dd3e
 
 ### Phase 3: TypeScript Types and Typed Client
 
 #### Automated
 
-- [x] 3.1 `src/types/supabase.ts` generated and non-empty
-- [x] 3.2 `npx astro check` exits 0 (type-check; not `astro build`)
-- [x] 3.3 Types file contains expected table names
+- [x] 3.1 `src/types/supabase.ts` generated and non-empty — 7f8dd3e
+- [x] 3.2 `npx astro check` exits 0 (type-check; not `astro build`) — 7f8dd3e
+- [x] 3.3 Types file contains expected table names — 7f8dd3e
 
 #### Manual
 
-- [x] 3.4 IDE type completion works on `supabase.from('photos')`
-- [x] 3.5 `src/types/supabase.ts` is committed to git (not gitignored)
+- [x] 3.4 IDE type completion works on `supabase.from('photos')` — 7f8dd3e
+- [x] 3.5 `src/types/supabase.ts` is committed to git (not gitignored) — 7f8dd3e
