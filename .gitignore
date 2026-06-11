@@ -64,3 +64,6 @@ pnpm-debug.log*
 
 # Claude
 .claude
+
+#mcp
+.mcp.json
