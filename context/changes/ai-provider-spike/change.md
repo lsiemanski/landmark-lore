@@ -1,7 +1,7 @@
 ---
 change_id: ai-provider-spike
 title: AI provider spike
-status: impl_reviewed
+status: implementing
 created: 2026-06-05
 updated: 2026-06-11
 re_reviewed: 2026-06-11

@@ -35,6 +35,7 @@ build/
 # from 10x-astro-starter
 # build output
 dist/
+dist-dry/
 
 # generated types
 .astro/

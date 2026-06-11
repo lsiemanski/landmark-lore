@@ -534,15 +534,16 @@ complete and unlocks S-01/S-02.
 
 #### Automated
 
-- [ ] 2.1 Build passes with the new page
-- [ ] 2.2 Linting passes
-- [ ] 2.3 `wrangler deploy --dry-run` confirms client resize/decode code did not leak into Worker bundle
+- [x] 2.1 Build passes with the new page
+- [x] 2.2 Linting passes
+- [x] 2.3 `wrangler deploy --dry-run` confirms client resize/decode code did not leak into Worker bundle
 
 #### Manual
 
-- [ ] 2.4 Large JPEG shows downsized preview with long edge ≤ MAX_EDGE and smaller file
-- [ ] 2.5 Rendered result shows subjectName + description for a recognisable landmark
-- [ ] 2.6 Image orientation is correct (EXIF honored)
+- [x] 2.4 Large JPEG shows downsized preview with long edge ≤ MAX_EDGE and smaller file
+- [x] 2.5 Rendered result shows subjectName + description for a recognisable landmark
+- [x] 2.6 Image orientation is correct (EXIF honored)
+- [x] 2.7 In-flight guard works: "Identify" disabled while a request is outstanding, no auto-retry on failure (no duplicate `/api/identify` calls)
 
 ### Phase 3: End-to-end verification & F-02 close-out
 

@@ -22,3 +22,10 @@
 - **Problem**: The `identify.ts` POST grew into one long block (auth, validation, consume, AI call + fallback, refund, response) — hard to read, hard to test, and hard to review; orchestration and logic are tangled.
 - **Rule**: Don't write one long function. Keep functions short and single-responsibility; extract well-named private helpers (e.g. `validateUpload`, `consumeSlot`, `identifyImage`, `refundSlot`) so the handler reads as a sequence of intention-revealing steps. Function names should document behaviour — the code self-documents instead of relying on block comments.
 - **Applies to**: implement, impl-review
+
+## Build dev harnesses to production conventions
+
+- **Context**: Any developer harness, spike, or test page (e.g. `src/pages/*-test.astro`, internal tooling UI) — anything labelled "throwaway" or "dev-only".
+- **Problem**: Harnesses scoped as throwaway skip project conventions (e.g. vanilla `<script>` instead of a React island, no a11y locators, lint rules hidden by the `.astro` parser), so convention drift and latent mistakes go undetected until real UI is built.
+- **Rule**: A developer harness must follow the same framework choice, lint, and structural conventions as production UI — no vanilla-script or convention shortcuts just because it's "temporary".
+- **Applies to**: plan, plan-review, implement, impl-review
