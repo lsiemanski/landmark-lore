@@ -58,6 +58,24 @@ export type Database = {
         }
         Relationships: []
       }
+      image_usage: {
+        Row: {
+          count: number
+          period: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          period: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          period?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       identifications: {
         Row: {
           created_at: string
@@ -142,7 +160,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      try_consume_image_usage: {
+        Args: {
+          p_period: string
+          p_limit: number
+        }
+        Returns: {
+          allowed: boolean
+          used: number
+        }
+      }
+      refund_image_usage: {
+        Args: {
+          p_period: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       photo_status: "pending" | "identified" | "unrecognized" | "error"

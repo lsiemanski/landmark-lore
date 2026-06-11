@@ -96,17 +96,28 @@ Three concerns, cleanly separated:
 2. **Worker (`/api/identify`)** owns the session check, rate limit, and OpenRouter call:
    verify auth → check+increment `image_usage` → validate media_type + byte cap → build
    vision message → call `chat.completions.create` → parse and return `{ result }`.
-3. **Database** owns usage state: `image_usage (user_id, period, count)` table with a simple
-   check-then-increment (race condition acceptable for the spike; atomic RPC is S-01 hardening).
+3. **Database** owns usage state and enforcement: `image_usage (user_id, period, count)` plus two
+   `security definer` RPCs. `try_consume_image_usage` does an atomic check-and-consume under
+   `SELECT … FOR UPDATE` (concurrent callers serialise on the row — the cap can't be overshot);
+   `refund_image_usage` decrements on AI failure. Net effect: **consume-on-attempt, refund-on-failure**,
+   so only successful identifications count. The table has no client write policy, so the cap
+   cannot be reset/bypassed.
 
 The Worker bundle is `openai` + the Supabase client (already in the project). The client-side
 resize/decode must never be imported by the route.
 
 ## Critical Implementation Details
 
-- **Model config must be centralised.** `src/lib/ai/models.ts` exports `MODELS` and `ModelTier`.
-  The route imports `MODELS.paid`; swapping to `MODELS.free` is a one-line change. Never hardcode
-  a model string in the route itself.
+- **Model + operational config must be centralised.** `src/lib/ai/models.ts` is the model
+  *registry* (`MODELS`, `ModelTier`). `src/lib/ai/config.ts` exports `IDENTIFY_CONFIG` — the
+  *active* model plus the tunable limits (`dailyImageLimit`, `maxBytes`, `allowedTypes`). The
+  route reads everything from `IDENTIFY_CONFIG`; never hardcode a model string, limit, byte cap,
+  or media-type list in the route itself.
+- **`model` + `dailyImageLimit` are runtime-tunable without a rebuild.** They are sourced from
+  `astro:env/server` (`IDENTIFY_MODEL`, `IDENTIFY_DAILY_LIMIT`, both `access: "secret"` → read at
+  runtime, not bundled), with the values in `config.ts` as defaults when unset. Change them via a
+  Cloudflare Worker variable (dashboard / `wrangler`) — no `astro build`. `maxBytes`/`allowedTypes`
+  stay code defaults for now (promote to env on the same pattern if needed).
 - **Image input format differs from Anthropic.** OpenRouter/OpenAI uses
   `{ type: "image_url", image_url: { url: "data:image/jpeg;base64,…" } }` inside the `content`
   array, not a separate `source` object. Getting this wrong produces a 400 from OpenRouter.
@@ -201,13 +212,18 @@ create policy "users can view own usage"
   on public.image_usage for select
   using (auth.uid() = user_id);
 
--- Users can upsert their own usage (required for anon-key client writes)
-create policy "users can upsert own usage"
-  on public.image_usage for all
-  using (auth.uid() = user_id);
+-- NO insert/update/delete policy: the anon-key client cannot write directly, so
+-- a user cannot reset their count to bypass the cap. Writes go exclusively
+-- through two security-definer functions, each scoped to the calling user:
+--   try_consume_image_usage(period, limit) → (allowed, used)
+--     atomic check-and-consume under SELECT … FOR UPDATE (serialises bursts)
+--   refund_image_usage(period) → used
+--     decrement (floored at 0) when a reserved identification fails
 ```
-The existing `createClient()` uses the anon key — the upsert policy above allows authenticated
-users to write their own rows without needing a service-role key or a second Supabase client.
+The existing `createClient()` uses the anon key. Because the table is read-only to clients and
+the functions are `security definer`, the cap is enforced atomically and cannot be reset by a
+user — no service-role key or second Supabase client needed. See the migration for the full
+function bodies.
 
 #### 6. Identify route
 
@@ -219,10 +235,11 @@ OpenRouter with structured output, and returns the parsed result.
 **Contract**:
 
 ```
-Constants:
-  IMAGE_LIMIT     = 100          (daily cap per user)
-  MAX_BYTES       = 5 * 1024 * 1024
-  ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp']
+Config (from `src/lib/ai/config.ts` → `IDENTIFY_CONFIG`, not in-route constants):
+  model           = MODELS.paid  (active model)
+  dailyImageLimit = 100          (daily cap per user)
+  maxBytes        = 5 * 1024 * 1024
+  allowedTypes    = ['image/jpeg', 'image/png', 'image/webp']
 
 Per request (not a module constant — avoids a stale period across a day boundary):
   const period = new Date().toISOString().slice(0, 10)   // 'YYYY-MM-DD'
@@ -256,13 +273,16 @@ Request flow (in order — return early on first failure):
 | `OPENROUTER_API_KEY` absent | `503` | `{ error: "AI provider not configured" }` |
 | Supabase client `null` (unconfigured) | `503` | `{ error: "Supabase not configured" }` |
 | No valid session | `401` | `{ error: "Unauthorised" }` |
-| `image_usage.count >= IMAGE_LIMIT` for current period | `429` | `{ error: "Daily limit reached", limit: 100, used: N }` |
 | `media_type` ∉ allowed list | `415` | `{ error: "Unsupported media type" }` |
 | Payload > `MAX_BYTES` | `413` | `{ error: "File too large" }` |
-| OpenRouter call throws | `502` | `{ error: "AI provider error" }` |
+| `try_consume_image_usage` errors | `503` | `{ error: "Usage check failed" }` |
+| Consume returns `allowed=false` (limit) | `429` | `{ error: "Daily limit reached", limit: 100, used: N }` |
+| OpenRouter call throws (slot refunded) | `502` | `{ error: "AI provider error" }` |
 | Success | `200` | `{ result: { recognised, subjectName, description } }` |
 
-On success: increment `image_usage.count` for the user+period (upsert).
+Cheap input validation (415/413) runs **before** consuming a slot, so bad requests never count.
+The slot is consumed up-front via `try_consume_image_usage` (atomic, enforces the cap); on AI
+failure the `catch` calls `refund_image_usage`, so only successful identifications count.
 
 OpenRouter call shape:
 ```ts
@@ -350,6 +370,12 @@ an "Identify" action, and a results panel showing `recognised` / `subjectName` /
 plus the downsized preview and final dimensions. Requires the user to be signed in (the session
 cookie is sent automatically with the fetch).
 
+**In-flight guard (required).** Because the route is **not idempotent** (idempotency keys are
+parked for S-01), the page must prevent duplicate submissions of the same logical request:
+disable the "Identify" action while a request is outstanding (re-enable in a `finally`), and
+**do not auto-retry on timeout/error** — surface the error and let the user re-initiate manually.
+This kills the common double-tap / proxy-retry double-spend without server-side idempotency.
+
 #### 2. Client downsizing module
 
 **File**: `src/pages/identify-test.astro` client `<script>` (or `src/lib/client/downscale.ts`)
@@ -373,6 +399,8 @@ cookie is sent automatically with the fetch).
 - [ ] 2.4 Large JPEG shows downsized preview with long edge ≤ `MAX_EDGE` and smaller file size
 - [ ] 2.5 Rendered result shows `subjectName` + `description` for a recognisable landmark
 - [ ] 2.6 Image orientation is correct (EXIF honored — no sideways/upside-down photos)
+- [ ] 2.7 In-flight guard works: "Identify" is disabled while a request is outstanding and a
+      failed request does not auto-retry (no duplicate `/api/identify` calls in DevTools Network)
 
 **Implementation Note**: After this phase and automated verification passes, pause for manual
 confirmation that the page downsizes and identifies correctly before proceeding to Phase 3.
@@ -452,8 +480,17 @@ complete and unlocks S-01/S-02.
   Supabase profiles and a settings UI. Not planned for MVP.
 - **Auto-fallback on limit**: when `count >= IMAGE_LIMIT`, route to `MODELS.free` instead of
   returning `429`. Not planned for MVP — limit hit returns `429` and the user is informed.
-- **Atomic rate-limit increment**: replace the current read-then-upsert with a Supabase RPC
-  using `SELECT … FOR UPDATE` to eliminate the race window. Race condition accepted for MVP scale.
+- ~~**Atomic rate-limit increment**~~: **Done in this spike** — `try_consume_image_usage`
+  (`SELECT … FOR UPDATE`) + `refund_image_usage` implement consume-on-attempt / refund-on-failure,
+  closing the overshoot race. Remaining for S-01: wiring the cap into real app usage/UX.
+- **Idempotency keys**: the route is not idempotent — a retried/duplicated request consumes a
+  fresh slot and makes a fresh paid AI call (and, once S-01/S-02 persist data, would create a
+  duplicate, possibly *conflicting* identification, since LLM output is non-deterministic).
+  Parked for S-01: add a client-generated `request_id` (UUID) as a unique key on the
+  usage/identification write so a retry returns the prior result instead of re-consuming.
+  **Spike mitigation**: the Phase 2 in-flight guard (no double-submit, no auto-retry) removes the
+  common double-spend cause. Consequence until S-01: the 100/day cap bounds *attempts*, not
+  guaranteed-distinct successful identifications.
 - **HEIC / iPhone-gallery support**: `heic2any` or `libheif-wasm` in the client. Not planned for MVP.
 
 ## Migration Notes
@@ -480,18 +517,18 @@ complete and unlocks S-01/S-02.
 
 #### Automated
 
-- [ ] 1.1 Type checking passes (`npm run build` / typecheck)
-- [ ] 1.2 Linting passes
-- [ ] 1.3 Worker bundle within limits via `wrangler deploy --dry-run` (well under 1 MB)
-- [ ] 1.4 Route returns `503` when `OPENROUTER_API_KEY` is unset
-- [ ] 1.5 Route returns `401` for unauthenticated requests
+- [x] 1.1 Type checking passes (`npm run build` / typecheck)
+- [x] 1.2 Linting passes
+- [x] 1.3 Worker bundle within limits via `wrangler deploy --dry-run` (well under 1 MB)
+- [x] 1.4 Route returns `503` when `OPENROUTER_API_KEY` is unset
+- [x] 1.5 Route returns `401` for unauthenticated requests
 
 #### Manual
 
-- [ ] 1.6 `curl` with a known small JPEG + valid session returns `{ result: { recognised, subjectName, description } }`
-- [ ] 1.7 Unrecognisable image returns `200` with `recognised: false` and a non-empty description
-- [ ] 1.8 Non-image / wrong media_type returns `415`; oversized payload returns `413`
-- [ ] 1.9 Row with `count = 100` in `image_usage` → returns `429` with usage info
+- [x] 1.6 `curl` with a known small JPEG + valid session returns `{ result: { recognised, subjectName, description } }`
+- [x] 1.7 Unrecognisable image returns `200` with `recognised: false` and a non-empty description
+- [x] 1.8 Non-image / wrong media_type returns `415`; oversized payload returns `413`
+- [x] 1.9 Row with `count = 100` in `image_usage` → returns `429` with usage info
 
 ### Phase 2: Client — downsizing test page
 
