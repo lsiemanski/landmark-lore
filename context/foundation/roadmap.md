@@ -83,7 +83,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01, S-04
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** `@anthropic-ai/sdk` bundle size must be verified against the Workers 1 MB compressed limit (infrastructure.md risk register); verifying this before S-01 prevents a mid-sprint integration failure.
+- **Risk:** `openai` SDK (used via OpenRouter) bundle size must be verified against the Workers 1 MB compressed limit (infrastructure.md risk register); verifying this before S-01 prevents a mid-sprint integration failure.
 - **Status:** ready
 
 ## Slices
@@ -143,7 +143,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                    | Suggested issue title                                              | Ready for `/10x-plan` | Notes                                        |
 |------------|------------------------------|--------------------------------------------------------------------|-----------------------|----------------------------------------------|
 | F-01       | data-schema                  | Design and apply Supabase schema for photos, folders, identifications | yes                | Run `/10x-plan data-schema`                  |
-| F-02       | ai-provider-spike            | Configure Claude API key, verify identification call end-to-end    | yes                   | Run `/10x-plan ai-provider-spike`            |
+| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | yes | Run `/10x-plan ai-provider-spike` |
 | S-01       | first-identification-and-save | Build upload → identify → save core flow                          | no                    | Needs F-01 and F-02 first                    |
 | S-02       | follow-up-questions          | Add follow-up questions to the identification session              | no                    | Needs S-01                                   |
 | S-03       | archive-and-folders          | Build archive view and manual folder management                    | no                    | Needs S-01                                   |
