@@ -29,3 +29,10 @@
 - **Problem**: Harnesses scoped as throwaway skip project conventions (e.g. vanilla `<script>` instead of a React island, no a11y locators, lint rules hidden by the `.astro` parser), so convention drift and latent mistakes go undetected until real UI is built.
 - **Rule**: A developer harness must follow the same framework choice, lint, and structural conventions as production UI — no vanilla-script or convention shortcuts just because it's "temporary".
 - **Applies to**: plan, plan-review, implement, impl-review
+
+## Constants belong in config/resource files, not logic files
+
+- **Context**: All layers / any phase — any time constants (strings, numbers, URLs, limits, magic values) are introduced or modified
+- **Problem**: Constants get buried in logic files, making them hard to find, update, or audit; changes require digging through business logic to locate the value
+- **Rule**: Move constants (strings, numbers, URLs, limits) to dedicated config files or resource files — never embed them in files that also contain business logic or implementation code.
+- **Applies to**: all
