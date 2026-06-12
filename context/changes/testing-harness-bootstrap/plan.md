@@ -631,7 +631,7 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 - [x] 5.2 `npm run test:integration` runs exactly 2 tests (integration only) — eb1341a
 - [x] 5.3 `npm run build` passes — eb1341a
 - [x] 5.4 `npx astro check` exits clean (Phase 5) — eb1341a
-- [x] 5.7 `npm run lint` exits clean (gate added in impl-review addendum) — a4fa868
+- [x] 5.7 `npm run lint` exits clean (gate added in impl-review addendum) — 77128fe
 
 #### Manual
 
