@@ -558,21 +558,21 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Automated
 
-- [x] 2.1 `npm run build` passes (no import breakage from extraction)
-- [x] 2.2 `npx astro check` exits clean (Phase 2)
-- [x] 2.3 `npm test` still exits 0 with no test files (passWithNoTests)
+- [x] 2.1 `npm run build` passes (no import breakage from extraction) — 7b82f3c
+- [x] 2.2 `npx astro check` exits clean (Phase 2) — 7b82f3c
+- [x] 2.3 `npm test` still exits 0 with no test files (passWithNoTests) — 7b82f3c
 
 #### Manual
 
-- [x] 2.4 `identify.ts` no longer contains `identifyImage`, `requestIdentification`, `visionMessages`, or `identificationSchema`
-- [x] 2.5 `src/lib/ai/identification.ts` exists and contains all four
+- [x] 2.4 `identify.ts` no longer contains `identifyImage`, `requestIdentification`, `visionMessages`, or `identificationSchema` — 7b82f3c
+- [x] 2.5 `src/lib/ai/identification.ts` exists and contains all four — 7b82f3c
 
 ### Phase 3: Identification-contract tests
 
 #### Automated
 
-- [ ] 3.1 `npm test` runs 6 tests in `test/unit/identification.test.ts`, all green
-- [ ] 3.2 An unregistered outbound HTTP call fails the test (`onUnhandledRequest: 'error'`)
+- [x] 3.1 `npm test` runs 6 tests in `test/unit/identification.test.ts`, all green
+- [x] 3.2 An unregistered outbound HTTP call fails the test (`onUnhandledRequest: 'error'`)
 
 #### Manual
 
