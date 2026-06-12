@@ -29,7 +29,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 
 | ID   | Change ID                    | Outcome (user can …)                                                              | Prerequisites | PRD refs                      | Status   |
 |------|------------------------------|-----------------------------------------------------------------------------------|---------------|-------------------------------|----------|
-| F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —             | FR-003, FR-006, FR-007        | ready    |
+| F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —             | FR-003, FR-006, FR-007        | done     |
 | F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | done     |
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02    | FR-003, FR-004, FR-006, US-01 | proposed |
 | S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01          | FR-005                        | proposed |
@@ -71,7 +71,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Schema designed upfront avoids mid-sprint migrations; if the folders table design does not account for FR-007's manual-move requirement, S-03 will require a schema migration before it can ship.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: AI provider spike
 
@@ -169,3 +169,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 (Empty on first generation. `/10x-archive` appends entries here when a change is archived.)
+
+- **F-01: (foundation) photos, folders, and identifications tables exist in Supabase** — Archived 2026-06-12 → `context/archive/2026-06-03-data-schema/`. Lesson: —.

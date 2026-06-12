@@ -1,10 +1,10 @@
 ---
 change_id: data-schema
 title: Data schema
-status: impl_reviewed
+status: archived
 created: 2026-06-03
-updated: 2026-06-03
-archived_at: null
+updated: 2026-06-12
+archived_at: 2026-06-12T08:47:15Z
 ---
 
 ## Notes
