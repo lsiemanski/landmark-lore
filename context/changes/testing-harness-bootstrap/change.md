@@ -1,9 +1,9 @@
 ---
 change_id: testing-harness-bootstrap
 title: Testing harness bootstrap
-status: implementing
+status: impl_reviewed
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-13
 
 archived_at: null
 ---

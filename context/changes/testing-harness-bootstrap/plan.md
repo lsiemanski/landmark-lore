@@ -407,6 +407,19 @@ route integration tests will copy.
 here for manual confirmation from the human that the manual testing was successful before
 proceeding to the next phase.
 
+### Addendum (applied during Phase 4)
+
+To get gate 4.3 (`npm run lint`) green on Windows, Phase 4 also applied these unplanned
+infra unblockers — recorded here so later reviews don't re-flag them as drift:
+
+- `.prettierrc.json`: add `"endOfLine": "auto"` (`core.autocrlf=true` caused CRLF checkout →
+  ~1196 false prettier errors across the repo).
+- `eslint.config.js`: add `{ ignores: ["src/types/supabase.ts"] }` for the auto-generated
+  Supabase types; `.prettierignore` mirrors this (impl-review F1) so regeneration doesn't
+  fight the formatter.
+- Lint/prettier autofix swept `src/lib/ai/identification.ts` (`type` → `interface`),
+  `test/setup.ts`, and `test/unit/identification.test.ts` (re-wrapping) — behaviour unchanged.
+
 ---
 
 ## Phase 5: Integration test helpers (Supabase local)
@@ -578,21 +591,21 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Manual
 
-- [x] 3.3 Test output labels the two describe groups as Risk #1 and Risk #4
-- [x] 3.4 The 400-retry test asserts `expect(calls).toBe(2)`
+- [x] 3.3 Test output labels the two describe groups as Risk #1 and Risk #4 — a4dddc7
+- [x] 3.4 The 400-retry test asserts `expect(calls).toBe(2)` — a4dddc7
 
 ### Phase 4: Route smoke test
 
 #### Automated
 
-- [x] 4.1 `npm test` runs 8 total tests (6 unit + 2 integration), all green
-- [x] 4.2 `npx astro check` exits clean (Phase 4)
-- [x] 4.3 `npm run lint` exits clean
+- [x] 4.1 `npm test` runs 8 total tests (6 unit + 2 integration), all green — a4dddc7
+- [x] 4.2 `npx astro check` exits clean (Phase 4) — a4dddc7
+- [x] 4.3 `npm run lint` exits clean — a4dddc7
 
 #### Manual
 
-- [x] 4.4 `npm test -- --reporter=verbose` shows tests grouped under Risk #1 describe labels
-- [x] 4.5 Removing an MSW handler from one test causes it to fail with "Unhandled request"
+- [x] 4.4 `npm test -- --reporter=verbose` shows tests grouped under Risk #1 describe labels — a4dddc7
+- [x] 4.5 Removing an MSW handler from one test causes it to fail with "Unhandled request" — a4dddc7
 
 ### Phase 5: Integration test helpers (Supabase local)
 
