@@ -21,4 +21,6 @@ export const IDENTIFY_CONFIG = {
   maxBytes: 5 * 1024 * 1024,
   /** Accepted upload media types. */
   allowedTypes: ["image/jpeg", "image/png", "image/webp"] as readonly string[],
+  /** OpenRouter API base URL (OpenAI-compatible). */
+  openrouterBaseUrl: "https://openrouter.ai/api/v1",
 } as const;

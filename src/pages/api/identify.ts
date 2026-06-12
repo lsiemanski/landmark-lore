@@ -3,16 +3,10 @@ import OpenAI from "openai";
 import { OPENROUTER_API_KEY } from "astro:env/server";
 import { createClient } from "@/lib/supabase";
 import { IDENTIFY_CONFIG } from "@/lib/ai/config";
+import prompts from "@/lib/ai/identify-prompts.yaml";
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-const SYSTEM_PROMPT =
-  "Identify the primary landmark, artwork, monument, or notable subject in the photo. " +
-  "Provide a substantive historical/cultural description, not just a label. " +
-  "If you cannot confidently identify it, set recognised=false and explain why.";
-
-const JSON_SHAPE_HINT =
-  " Respond with a JSON object matching exactly: { recognised: boolean, subjectName: string, description: string }";
+const SYSTEM_PROMPT = prompts.systemPrompt.trim();
+const JSON_SHAPE_HINT = " " + prompts.jsonShapeHint.trim();
 
 const identificationSchema = {
   type: "object",
@@ -114,7 +108,7 @@ async function refundSlot(supabase: Supabase, period: string): Promise<void> {
 // --- AI identification --------------------------------------------------------
 
 async function identifyImage(base64: string, apiKey: string): Promise<unknown> {
-  const client = new OpenAI({ apiKey, baseURL: OPENROUTER_BASE_URL });
+  const client = new OpenAI({ apiKey, baseURL: IDENTIFY_CONFIG.openrouterBaseUrl });
   const response = await requestIdentification(client, base64);
 
   const content = response.choices[0].message.content;

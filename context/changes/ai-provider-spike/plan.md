@@ -549,12 +549,12 @@ complete and unlocks S-01/S-02.
 
 #### Automated
 
-- [ ] 3.1 `wrangler deploy --dry-run` passes, compressed Worker bundle well under 1 MB
+- [x] 3.1 `wrangler deploy --dry-run` passes, compressed Worker bundle well under 1 MB
 
 #### Manual
 
-- [ ] 3.2 Real phone photo (JPEG/PNG/WebP) identified end-to-end through the test page
-- [ ] 3.3 "Not recognised" path observed on a non-landmark photo
-- [ ] 3.4 Rate limit `429` observed at count = 100
-- [ ] 3.5 Free-tier CPU adequate for the relay (no CPU-limit errors)
-- [ ] 3.6 F-02 success criteria in `research.md` checked off
+- [x] 3.2 Real phone photo (JPEG/PNG/WebP) identified end-to-end through the test page
+- [x] 3.3 "Not recognised" path observed on a non-landmark photo
+- [x] 3.4 Rate limit `429` observed at count = 100
+- [x] 3.5 Free-tier CPU adequate for the relay (no CPU-limit errors)
+- [x] 3.6 F-02 success criteria in `research.md` checked off

@@ -199,9 +199,30 @@ None outstanding for research. Remaining items are **execution** tasks for `/10x
 
 ## Updated F-02 success-criteria mapping
 
-- [x] Provider chosen — Claude API, `claude-sonnet-4-6`.
+> **Provider note (2026-06-11):** the provider was switched from Anthropic to **OpenRouter**
+> with **`google/gemini-2.5-flash`** as the active model (`openai` SDK, `baseURL` override). The
+> Anthropic-specific code sketch above is superseded by the implemented OpenRouter route
+> (`src/pages/api/identify.ts`); the integration *shape* it verified (env idiom, route shape,
+> workerd `apiKey` handling, vision base64 format, structured-output contract) still holds.
+
+- [x] Provider chosen — OpenRouter, `google/gemini-2.5-flash` (free fallback
+      `google/gemini-2.0-flash-lite:free` defined alongside).
 - [x] Integration approach verified — env idiom, route shape, workerd `apiKey` handling, vision
       base64 format, structured-output contract all confirmed.
-- [ ] Key configured as a Cloudflare Workers secret — `/10x-implement`.
-- [ ] Test identification call returns subject + substantive description end-to-end — `/10x-implement`.
-- [ ] Bundle size verified against the 1 MB compressed Workers limit — `/10x-implement`.
+- [x] Key configured as a Cloudflare Workers secret — `OPENROUTER_API_KEY` set via `.dev.vars`
+      (local) and `wrangler secret put` (deployed).
+- [x] Test identification call returns subject + substantive description end-to-end — confirmed
+      via `curl` (Phase 1) and the test page (Phase 2/3): structured `{ recognised, subjectName,
+      description }`, including the `recognised: false` guardrail path.
+- [x] Bundle size verified against the 1 MB compressed Workers limit — `wrangler deploy
+      --dry-run` reports the Worker at ~450 KiB gzip, well under the 1 MB limit.
+
+### F-02 close-out notes (2026-06-12)
+
+- **Free-tier CPU adequate.** The Worker only relays (session check + Supabase RPC + base64
+  encode + one OpenRouter fetch + JSON parse); no CPU-limit errors observed during `wrangler
+  dev` / dry-run. Client-side resize keeps payloads small. Revisit only if measurements change.
+- **Rate limiting proven.** `try_consume_image_usage` / `refund_image_usage` enforce the
+  100/day cap atomically; a `count = 100` row yields `429` with usage info.
+- **Deferred to S-01:** BYOK (user-supplied keys), auto-fallback to the free model on limit hit,
+  idempotency keys, and HEIC support. See plan §"Parked (out of scope for MVP)".

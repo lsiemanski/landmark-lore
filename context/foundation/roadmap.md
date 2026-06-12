@@ -3,7 +3,7 @@ project: Landmark Lore
 version: 1
 status: draft
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-06-12
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -30,7 +30,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 | ID   | Change ID                    | Outcome (user can …)                                                              | Prerequisites | PRD refs                      | Status   |
 |------|------------------------------|-----------------------------------------------------------------------------------|---------------|-------------------------------|----------|
 | F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —             | FR-003, FR-006, FR-007        | ready    |
-| F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | ready    |
+| F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | done     |
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02    | FR-003, FR-004, FR-006, US-01 | proposed |
 | S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01          | FR-005                        | proposed |
 | S-03 | archive-and-folders          | view their archive and manually move photos between folders                        | S-01          | FR-007                        | proposed |
@@ -84,7 +84,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** `openai` SDK (used via OpenRouter) bundle size must be verified against the Workers 1 MB compressed limit (infrastructure.md risk register); verifying this before S-01 prevents a mid-sprint integration failure.
-- **Status:** ready
+- **Status:** done
 
 ## Slices
 
@@ -143,7 +143,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                    | Suggested issue title                                              | Ready for `/10x-plan` | Notes                                        |
 |------------|------------------------------|--------------------------------------------------------------------|-----------------------|----------------------------------------------|
 | F-01       | data-schema                  | Design and apply Supabase schema for photos, folders, identifications | yes                | Run `/10x-plan data-schema`                  |
-| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | yes | Run `/10x-plan ai-provider-spike` |
+| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | done | Complete — unlocks S-01, S-02 |
 | S-01       | first-identification-and-save | Build upload → identify → save core flow                          | no                    | Needs F-01 and F-02 first                    |
 | S-02       | follow-up-questions          | Add follow-up questions to the identification session              | no                    | Needs S-01                                   |
 | S-03       | archive-and-folders          | Build archive view and manual folder management                    | no                    | Needs S-01                                   |
