@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw";
-import type { APIContext } from "astro";
 import { POST } from "@/pages/api/identify";
 import { server } from "../msw/server";
 import { makeCompletionResponse } from "../helpers/openrouter";
+import { makeAPIContext } from "../helpers/route";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -23,16 +23,6 @@ function makeFormData(): FormData {
   return form;
 }
 
-function makeContext(formData: FormData): APIContext {
-  return {
-    request: new Request("http://localhost/api/identify", {
-      method: "POST",
-      body: formData,
-    }),
-    cookies: {},
-  } as unknown as APIContext;
-}
-
 describe("Risk #1 — HTTP layer (route smoke test)", () => {
   it("returns 200 with recognised: true", async () => {
     server.use(
@@ -44,7 +34,7 @@ describe("Risk #1 — HTTP layer (route smoke test)", () => {
         ),
       ),
     );
-    const response = await POST(makeContext(makeFormData()));
+    const response = await POST(makeAPIContext(makeFormData()));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.result.recognised).toBe(true);
@@ -56,7 +46,7 @@ describe("Risk #1 — HTTP layer (route smoke test)", () => {
         HttpResponse.json(makeCompletionResponse('{"recognised":false,"subjectName":"","description":""}')),
       ),
     );
-    const response = await POST(makeContext(makeFormData()));
+    const response = await POST(makeAPIContext(makeFormData()));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.result.recognised).toBe(false);

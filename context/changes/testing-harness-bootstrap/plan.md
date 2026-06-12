@@ -611,10 +611,10 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Automated
 
-- [ ] 5.1 `npm run test:unit` runs exactly 6 tests (unit only)
-- [ ] 5.2 `npm run test:integration` runs exactly 2 tests (integration only)
-- [ ] 5.3 `npm run build` passes
-- [ ] 5.4 `npx astro check` exits clean (Phase 5)
+- [x] 5.1 `npm run test:unit` runs exactly 6 tests (unit only)
+- [x] 5.2 `npm run test:integration` runs exactly 2 tests (integration only)
+- [x] 5.3 `npm run build` passes
+- [x] 5.4 `npx astro check` exits clean (Phase 5)
 
 #### Manual
 
