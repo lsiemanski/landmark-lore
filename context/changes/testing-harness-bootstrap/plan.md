@@ -329,8 +329,10 @@ the handler to assert exactly 2 requests were made. Test cases:
 
 **SDK auto-retry note**: `identifyImage` constructs `new OpenAI(...)` with no `maxRetries`, so the
 SDK default (2 retries) applies. The 500 test (case 5) will therefore hit the MSW handler 3 times
-with backoff (~1.5s+), not once — it still rejects correctly, so the assertion holds, but do not
-assert a call count on that path. The 400-retry test (case 6) is unaffected: the SDK does not
+with backoff, not once — it still rejects correctly, so the assertion holds, but do not assert a
+call count on that path. **As implemented**, the 500 handler returns a null body with a
+`Retry-After: 0` header (collapsing the backoff sleep to ~0) under a 15s test timeout, so all 3
+SDK attempts finish in ~20ms instead of ~1.5s. The 400-retry test (case 6) is unaffected: the SDK does not
 retry 400s, so the only second call is the explicit `json_object` fallback (count == 2). If a
 deterministic count is ever needed on a retryable status, the test must pass `maxRetries: 0` —
 which would require parameterising the client construction in `identification.ts`.
@@ -571,8 +573,8 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Automated
 
-- [x] 3.1 `npm test` runs 6 tests in `test/unit/identification.test.ts`, all green
-- [x] 3.2 An unregistered outbound HTTP call fails the test (`onUnhandledRequest: 'error'`)
+- [x] 3.1 `npm test` runs 6 tests in `test/unit/identification.test.ts`, all green — 1f416d6
+- [x] 3.2 An unregistered outbound HTTP call fails the test (`onUnhandledRequest: 'error'`) — 1f416d6
 
 #### Manual
 
