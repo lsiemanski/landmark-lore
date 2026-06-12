@@ -171,3 +171,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 (Empty on first generation. `/10x-archive` appends entries here when a change is archived.)
 
 - **F-01: (foundation) photos, folders, and identifications tables exist in Supabase** — Archived 2026-06-12 → `context/archive/2026-06-03-data-schema/`. Lesson: —.
+- **F-02: (foundation) AI provider chosen, key configured, test identification call verified** — Archived 2026-06-12 → `context/archive/2026-06-05-ai-provider-spike/`. Lesson: —.
