@@ -36,3 +36,24 @@
 - **Problem**: Constants get buried in logic files, making them hard to find, update, or audit; changes require digging through business logic to locate the value
 - **Rule**: Move constants (strings, numbers, URLs, limits) to dedicated config files or resource files — never embed them in files that also contain business logic or implementation code.
 - **Applies to**: all
+
+## Split return values by consumer
+
+- **Context**: Any function at any layer of the app — applies during planning (when helper signatures are specified) and implementation.
+- **Problem**: The caller must destructure and manage values it doesn't need, coupling it to unrelated concerns.
+- **Rule**: Don't return multiple unrelated values from one function — split by consumer.
+- **Applies to**: plan, implement, plan-review, impl-review
+
+## Group inputs by concern into typed objects
+
+- **Context**: Any function at any layer of the app — applies during planning and implementation.
+- **Problem**: Long argument lists are hard to read, easy to pass in the wrong order, and hide which values belong together — callers become coupled to the function's internal needs.
+- **Rule**: Don't pass many unrelated parameters to a function — group inputs by concern into named typed objects.
+- **Applies to**: plan, implement, plan-review, impl-review
+
+## Keep files under 250 lines
+
+- **Context**: Any source file, any layer of the codebase.
+- **Problem**: A file with many concerns is hard to navigate, review, and test in isolation — changes to one concern risk touching another unintentionally.
+- **Rule**: Keep files under 250 lines; split by single responsibility when a file approaches the limit.
+- **Applies to**: plan, implement, plan-review, impl-review
