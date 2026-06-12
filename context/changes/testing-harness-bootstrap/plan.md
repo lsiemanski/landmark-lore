@@ -578,21 +578,21 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Manual
 
-- [ ] 3.3 Test output labels the two describe groups as Risk #1 and Risk #4
-- [ ] 3.4 The 400-retry test asserts `expect(calls).toBe(2)`
+- [x] 3.3 Test output labels the two describe groups as Risk #1 and Risk #4
+- [x] 3.4 The 400-retry test asserts `expect(calls).toBe(2)`
 
 ### Phase 4: Route smoke test
 
 #### Automated
 
-- [ ] 4.1 `npm test` runs 8 total tests (6 unit + 2 integration), all green
-- [ ] 4.2 `npx astro check` exits clean (Phase 4)
-- [ ] 4.3 `npm run lint` exits clean
+- [x] 4.1 `npm test` runs 8 total tests (6 unit + 2 integration), all green
+- [x] 4.2 `npx astro check` exits clean (Phase 4)
+- [x] 4.3 `npm run lint` exits clean
 
 #### Manual
 
-- [ ] 4.4 `npm test -- --reporter=verbose` shows tests grouped under Risk #1 describe labels
-- [ ] 4.5 Removing an MSW handler from one test causes it to fail with "Unhandled request"
+- [x] 4.4 `npm test -- --reporter=verbose` shows tests grouped under Risk #1 describe labels
+- [x] 4.5 Removing an MSW handler from one test causes it to fail with "Unhandled request"
 
 ### Phase 5: Integration test helpers (Supabase local)
 

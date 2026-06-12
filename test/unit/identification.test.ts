@@ -28,9 +28,7 @@ describe("Risk #1 — recognition contract", () => {
   it("resolves with recognised: false without throwing", async () => {
     server.use(
       http.post(OPENROUTER_URL, () =>
-        HttpResponse.json(
-          makeCompletionResponse('{"recognised":false,"subjectName":"","description":""}'),
-        ),
+        HttpResponse.json(makeCompletionResponse('{"recognised":false,"subjectName":"","description":""}')),
       ),
     );
     const result = await identifyImage("base64data", "test-api-key");
@@ -40,34 +38,26 @@ describe("Risk #1 — recognition contract", () => {
 
 describe("Risk #4 — provider error handling", () => {
   it('rejects with "Empty response from AI provider" when content is null', async () => {
-    server.use(
-      http.post(OPENROUTER_URL, () => HttpResponse.json(makeCompletionResponse(null))),
-    );
-    await expect(identifyImage("base64data", "test-api-key")).rejects.toThrow(
-      "Empty response from AI provider",
-    );
+    server.use(http.post(OPENROUTER_URL, () => HttpResponse.json(makeCompletionResponse(null))));
+    await expect(identifyImage("base64data", "test-api-key")).rejects.toThrow("Empty response from AI provider");
   });
 
   it("rejects when content is non-JSON", async () => {
-    server.use(
-      http.post(OPENROUTER_URL, () =>
-        HttpResponse.json(makeCompletionResponse("not valid json at all")),
-      ),
-    );
+    server.use(http.post(OPENROUTER_URL, () => HttpResponse.json(makeCompletionResponse("not valid json at all"))));
     await expect(identifyImage("base64data", "test-api-key")).rejects.toThrow();
   });
 
   it("rejects with OpenAI.APIError for a non-400 HTTP error", async () => {
     server.use(
-      http.post(OPENROUTER_URL, () =>
-        // Null body: avoids CancelReadableStream hang (SDK cancels body before retry).
-        // Retry-After: 0: eliminates backoff sleep so all 3 SDK attempts finish fast.
-        new HttpResponse(null, { status: 500, headers: { "Retry-After": "0" } }),
+      http.post(
+        OPENROUTER_URL,
+        () =>
+          // Null body: avoids CancelReadableStream hang (SDK cancels body before retry).
+          // Retry-After: 0: eliminates backoff sleep so all 3 SDK attempts finish fast.
+          new HttpResponse(null, { status: 500, headers: { "Retry-After": "0" } }),
       ),
     );
-    await expect(identifyImage("base64data", "test-api-key")).rejects.toBeInstanceOf(
-      OpenAI.APIError,
-    );
+    await expect(identifyImage("base64data", "test-api-key")).rejects.toBeInstanceOf(OpenAI.APIError);
   }, 15_000);
 
   it("retries with json_object format on 400; makes exactly 2 calls", async () => {
@@ -82,9 +72,7 @@ describe("Risk #4 — provider error handling", () => {
           );
         }
         return HttpResponse.json(
-          makeCompletionResponse(
-            '{"recognised":true,"subjectName":"Test Landmark","description":"A test"}',
-          ),
+          makeCompletionResponse('{"recognised":true,"subjectName":"Test Landmark","description":"A test"}'),
         );
       }),
     );

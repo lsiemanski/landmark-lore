@@ -17,11 +17,11 @@ const identificationSchema = {
   additionalProperties: false,
 };
 
-export type IdentificationResult = {
+export interface IdentificationResult {
   recognised: boolean;
   subjectName: string;
   description: string;
-};
+}
 
 export async function identifyImage(base64: string, apiKey: string): Promise<unknown> {
   const client = new OpenAI({ apiKey, baseURL: IDENTIFY_CONFIG.openrouterBaseUrl });
