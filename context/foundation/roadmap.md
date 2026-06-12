@@ -27,24 +27,25 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 
 ## At a glance
 
-| ID   | Change ID                    | Outcome (user can …)                                                              | Prerequisites | PRD refs                      | Status   |
-|------|------------------------------|-----------------------------------------------------------------------------------|---------------|-------------------------------|----------|
-| F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —             | FR-003, FR-006, FR-007        | done     |
+| ID   | Change ID                    | Outcome (user can …)                                                              | Prerequisites  | PRD refs                      | Status   |
+|------|------------------------------|-----------------------------------------------------------------------------------|----------------|-------------------------------|----------|
+| F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —              | FR-003, FR-006, FR-007        | done     |
 | F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | done     |
-| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02    | FR-003, FR-004, FR-006, US-01 | proposed |
-| S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01          | FR-005                        | proposed |
-| S-03 | archive-and-folders          | view their archive and manually move photos between folders                        | S-01          | FR-007                        | proposed |
-| S-04 | account-lifecycle            | create an account, sign in, and reset their password via email                    | —             | FR-001, FR-002, FR-010        | ready    |
+| F-03 | testing-harness-bootstrap    | (foundation) Vitest runner configured; identification-contract integration tests pass | —           | —                             | ready    |
+| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | planned |
+| S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01           | FR-005                        | proposed |
+| S-03 | archive-and-folders          | view their archive and manually move photos between folders                        | S-01           | FR-007                        | proposed |
+| S-04 | account-lifecycle            | create an account, sign in, and reset their password via email                    | —              | FR-001, FR-002, FR-010        | ready    |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                  | Chain                              | Note                                                                          |
-|--------|------------------------|------------------------------------|-------------------------------------------------------------------------------|
-| A      | Identification core    | `F-01` / `F-02` → `S-01` → `S-02` | Critical path for `main_goal: speed`; F-01 and F-02 run in parallel.         |
-| B      | Archive & organisation | `S-01` → `S-03`                    | Branches from Stream A at `S-01`; parallel with `S-02` once `S-01` lands.    |
-| C      | Auth completion        | `S-04`                             | Standalone; no dependency on other slices; parallel with entire Stream A.     |
+| Stream | Theme                  | Chain                                        | Note                                                                                         |
+|--------|------------------------|----------------------------------------------|----------------------------------------------------------------------------------------------|
+| A      | Identification core    | `F-01` / `F-02` → `F-03` → `S-01` → `S-02` | Critical path for `main_goal: speed`; F-01, F-02, and F-03 can run in parallel once F-01/F-02 are done (F-03 has no schema dependency). |
+| B      | Archive & organisation | `S-01` → `S-03`                              | Branches from Stream A at `S-01`; parallel with `S-02` once `S-01` lands.                   |
+| C      | Auth completion        | `S-04`                                       | Standalone; no dependency on other slices; parallel with entire Stream A.                    |
 
 ## Baseline
 
@@ -88,18 +89,31 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Slices
 
+### F-03: Test harness bootstrap
+
+- **Outcome:** (foundation) Vitest runner configured; identification-contract and provider-error-handling integration tests pass against a mocked OpenRouter endpoint; test infrastructure is in place for all subsequent slices.
+- **Change ID:** testing-harness-bootstrap
+- **PRD refs:** —
+- **Unlocks:** S-01 integration test coverage (S-01 plan is explicitly blocked on this); all subsequent slices inherit the test runner and mock patterns.
+- **Prerequisites:** —
+- **Parallel with:** S-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Astro API routes run on workerd — the integration test approach (`wrangler`/`unstable_dev` vs. Astro test container) must be grounded in research before planning; the wrong choice leads to tests that pass locally but fail in the real Workers runtime.
+- **Status:** ready
+
 ### S-01: Upload, identify, and save a photo
 
 - **Outcome:** user can upload a photo from their device, receive a subject name and substantive description, and save it to their archive — all in one session.
 - **Change ID:** first-identification-and-save
 - **PRD refs:** FR-003, FR-004, FR-006, US-01
-- **Prerequisites:** F-01, F-02
+- **Prerequisites:** F-01, F-02, F-03
 - **Parallel with:** S-04
-- **Blockers:** —
+- **Blockers:** F-03 (`testing-harness-bootstrap`) — integration tests for this slice cannot be written until the test runner is configured and the mock patterns are established.
 - **Unknowns:**
   - Progress feedback mechanism: the NFR requires "continuous visible progress feedback" during AI analysis — streaming vs. polling during the provider API call. Owner: user. Block: no (either approach satisfies the NFR; decide during planning).
 - **Risk:** The highest-risk slice — new AI integration, photo upload to Supabase Storage, and identification result persistence all land here for the first time; Workers CPU time limit (10 ms free tier, infrastructure.md) may require profiling before public launch.
-- **Status:** proposed
+- **Status:** planned
 
 ### S-02: Follow-up questions
 
@@ -140,14 +154,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                    | Suggested issue title                                              | Ready for `/10x-plan` | Notes                                        |
-|------------|------------------------------|--------------------------------------------------------------------|-----------------------|----------------------------------------------|
-| F-01       | data-schema                  | Design and apply Supabase schema for photos, folders, identifications | yes                | Run `/10x-plan data-schema`                  |
-| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | done | Complete — unlocks S-01, S-02 |
-| S-01       | first-identification-and-save | Build upload → identify → save core flow                          | no                    | Needs F-01 and F-02 first                    |
-| S-02       | follow-up-questions          | Add follow-up questions to the identification session              | no                    | Needs S-01                                   |
-| S-03       | archive-and-folders          | Build archive view and manual folder management                    | no                    | Needs S-01                                   |
-| S-04       | account-lifecycle            | Add password reset; verify full auth flow end-to-end               | yes                   | Run `/10x-plan account-lifecycle`            |
+| Roadmap ID | Change ID                    | Suggested issue title                                              | Ready for `/10x-plan` | Notes                                                                          |
+|------------|------------------------------|--------------------------------------------------------------------|-----------------------|--------------------------------------------------------------------------------|
+| F-01       | data-schema                  | Design and apply Supabase schema for photos, folders, identifications | done               | Complete                                                                       |
+| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | done | Complete — unlocks S-01, S-02                                   |
+| F-03       | testing-harness-bootstrap    | Set up Vitest + identification-contract integration tests          | yes                   | Run `/10x-new testing-harness-bootstrap` → `/10x-research` → `/10x-plan`      |
+| S-01       | first-identification-and-save | Build upload → identify → save core flow                          | blocked               | F-01 and F-02 done; plan reviewed; blocked on F-03 for integration test coverage |
+| S-02       | follow-up-questions          | Add follow-up questions to the identification session              | no                    | Needs S-01                                                                     |
+| S-03       | archive-and-folders          | Build archive view and manual folder management                    | no                    | Needs S-01                                                                     |
+| S-04       | account-lifecycle            | Add password reset; verify full auth flow end-to-end               | yes                   | Run `/10x-plan account-lifecycle`                                              |
 
 ## Open Roadmap Questions
 
