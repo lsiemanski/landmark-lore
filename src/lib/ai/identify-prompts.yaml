@@ -9,3 +9,6 @@ jsonShapeHint: |
   Respond with a JSON object matching exactly:
   { recognised: boolean, subjectName: string, description: string }.
   Set recognised=false if the subject is a person, unrecognisable, or not a landmark/artwork/monument.
+
+userPrompt: |
+  Identify the main subject of this photo.

@@ -544,28 +544,28 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Automated
 
-- [x] 1.1 `npm test` exits 0 (no test files; via `passWithNoTests`)
-- [x] 1.2 `npm run build` passes
-- [x] 1.3 `npx astro check` exits clean (Phase 1)
+- [x] 1.1 `npm test` exits 0 (no test files; via `passWithNoTests`) — 030880f
+- [x] 1.2 `npm run build` passes — 030880f
+- [x] 1.3 `npx astro check` exits clean (Phase 1) — 030880f
 
 #### Manual
 
-- [x] 1.4 `vitest.config.ts` opens without TypeScript errors in the IDE
-- [x] 1.5 Stub at `test/stubs/astro-env-server.ts` exports all five env variables
-- [x] 1.6 `test/vitest-env.d.ts` exists with `/// <reference types="vitest/globals" />`
+- [x] 1.4 `vitest.config.ts` opens without TypeScript errors in the IDE — 030880f
+- [x] 1.5 Stub at `test/stubs/astro-env-server.ts` exports all five env variables — 030880f
+- [x] 1.6 `test/vitest-env.d.ts` exists with `/// <reference types="vitest/globals" />` — 030880f
 
 ### Phase 2: Extract identification logic
 
 #### Automated
 
-- [ ] 2.1 `npm run build` passes (no import breakage from extraction)
-- [ ] 2.2 `npx astro check` exits clean (Phase 2)
-- [ ] 2.3 `npm test` still exits 0 with no test files (passWithNoTests)
+- [x] 2.1 `npm run build` passes (no import breakage from extraction)
+- [x] 2.2 `npx astro check` exits clean (Phase 2)
+- [x] 2.3 `npm test` still exits 0 with no test files (passWithNoTests)
 
 #### Manual
 
-- [ ] 2.4 `identify.ts` no longer contains `identifyImage`, `requestIdentification`, `visionMessages`, or `identificationSchema`
-- [ ] 2.5 `src/lib/ai/identification.ts` exists and contains all four
+- [x] 2.4 `identify.ts` no longer contains `identifyImage`, `requestIdentification`, `visionMessages`, or `identificationSchema`
+- [x] 2.5 `src/lib/ai/identification.ts` exists and contains all four
 
 ### Phase 3: Identification-contract tests
 

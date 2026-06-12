@@ -17,6 +17,8 @@ export const IDENTIFY_CONFIG = {
   model: IDENTIFY_MODEL ?? MODELS.paid,
   /** Per-user daily image-identification cap. Override with IDENTIFY_DAILY_LIMIT. */
   dailyImageLimit: IDENTIFY_DAILY_LIMIT ?? 100,
+  /** Max tokens requested per identification completion. */
+  maxTokens: 1024,
   /** Max accepted upload size in bytes (after client-side downscale). */
   maxBytes: 5 * 1024 * 1024,
   /** Accepted upload media types. */
