@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-06 (Phase 1 change opened)
+> Last updated: 2026-06-12 (refresh — stale fixes + S-01 scope extensions)
 
 ## 1. Strategy
 
@@ -29,10 +29,11 @@ Tests follow three non-negotiable principles for this project:
    `/10x-research` during each rollout phase. If the plan and research
    disagree about where the failure lives, research is the ground truth.
 
-Hot-spot scope used for likelihood weighting: `src/`, `supabase/` — but the
-scoped git history held only 4 commits in the last 30 days (insufficient
-signal), so likelihood ratings below rely on the PRD, roadmap, and the
-Phase 2 interview rather than churn.
+Hot-spot scope used for likelihood weighting: `src/`, `supabase/`. Scoped
+git history (30 days) now holds 7 commits; top dirs: `src/components/auth`
+(6), `supabase/migrations` (5), `src/lib/ai` (4), `src/pages/api` (2).
+Churn confirms `identify.ts` and the migration path as the highest-change
+areas, consistent with the risk ordering below.
 
 ## 2. Risk Map
 
@@ -50,7 +51,7 @@ research's job, see §1 principle #3).
 | 4 | The AI provider returns a malformed/unexpected shape or throws, and the endpoint crashes or fabricates a result instead of failing in-band gracefully | High | Medium | PRD FR-004; roadmap F-02 (structured-output contract + error guards); interview Q1 |
 | 5 | An unauthenticated or unauthorized request triggers a paid identification call — cost and resource abuse | High | Medium | roadmap F-02 (spike endpoint ships without auth; access control deferred to S-01); infrastructure.md risk register (CPU/cost); abuse lens — resource abuse |
 | 6 | The server trusts client-supplied input (media type, size) instead of re-validating, so malformed or oversized payloads slip through | Medium | Medium | roadmap F-02 (415/413 guards, server-side allowlist); abuse lens — untrusted input / server-side validation parity |
-| 7 | `ANTHROPIC_API_KEY` or Supabase keys leak into the client bundle, logs, or an error body | High | Low | roadmap F-02 (server/secret env declaration); infrastructure.md §Operational Story (secrets); abuse lens — secret/PII leakage |
+| 7 | `OPENROUTER_API_KEY` or Supabase keys leak into the client bundle, logs, or an error body | High | Low | roadmap F-02 (server/secret env declaration); infrastructure.md §Operational Story (secrets); abuse lens — secret/PII leakage |
 
 **Impact × Likelihood rubric.** High impact = user loses access, data, or
 money, or failure is publicly visible. Medium = feature degrades, a
@@ -66,6 +67,16 @@ raised in interview Q2 (CPU/bundle limits, Pages-vs-Workers drift) is
 deliberately *not* a §2 risk — high-impact × low-likelihood infra limits
 belong to a quality gate (bundle `--dry-run` + CI build) and observability,
 not a unit test. It is routed to §3 Phase 5 / §5.
+
+**Design-gap note (Risk #1).** The current response contract (`recognised`,
+`subjectName`, `description`) carries no confidence score. There is no
+deterministic test that can catch a plausible-but-wrong identification that
+a user accepts and saves — the user has no system-supplied signal to doubt
+the result. This is a product design gap, not a software defect; it cannot
+be closed by a test until the contract includes a confidence field. Phase 4
+(AI-native golden-set eval) is the only current layer that can surface
+systematic misdirection by the model. (Source: Phase 2 refresh interview
+Q1, 2026-06-12.)
 
 ### Risk Response Guidance
 
@@ -87,14 +98,27 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|------------|-----------------|----------------|------------|--------|---------------|
-| 1 | Harness bootstrap + identification contract | Stand up the test runner and prove the recognised/not-recognised guardrail and graceful provider-boundary behavior | #1, #4 | unit + integration (mocked provider) | change opened | context/changes/testing-harness-bootstrap/ |
-| 2 | Upload integrity + input validation | Original bytes are preserved on save; server re-validates media type and size | #3, #6 | integration | not started | — |
-| 3 | Authorization + data isolation | Cross-user denial (RLS + storage), auth required on identify, secret containment | #2, #5, #7 | integration + build-output assertion | not started | — |
+| 1 | Harness bootstrap + identification contract | Stand up the test runner and prove the recognised/not-recognised guardrail and graceful provider-boundary behavior | #1, #4 | unit + integration (mocked provider) | not started | — |
+| 2 | Upload integrity + input validation + idempotency | Original bytes are preserved on save; server re-validates media type and size; re-submitted `request_id` returns cached result without a second AI call or duplicate DB row | #3, #6 | integration | not started | — |
+| 3 | Authorization + data isolation + rate-limit integrity | Cross-user denial (RLS + storage), auth required on identify, secret containment; `try_consume_image_usage` rejects double-consume; `refund_image_usage` failure does not crash the route | #2, #5, #7 | integration + build-output assertion | not started | — |
 | 4 | AI-native: identification accuracy eval | Catch real model/prompt regressions a mocked test cannot, on a small labeled image golden-set | #1 (deeper) | AI-native golden-set eval | not started | — |
 | 5 | Quality-gates wiring | Lock the floor in CI: lint/typecheck/test + Workers bundle dry-run + e2e on the critical flow | cross-cutting (#1–#7); interview Q2 | gates + 1 e2e | not started | — |
 
 **Status vocabulary** (fixed — parser literals): `not started` →
 `change opened` → `researched` → `planned` → `implementing` → `complete`.
+
+**Phase 1 urgency.** `first-identification-and-save` (S-01, `plan_reviewed`
+2026-06-12) is explicitly blocked on Phase 1 landing before its integration
+tests can be written. Start here.
+
+**Production-slice embedding (Phases 2–5).** These phases have no
+standalone change folders. Each phase's test coverage lands as sub-phases
+within the corresponding production slice: Phase 2 within S-01
+(`first-identification-and-save`); Phase 3 within S-01 or the first slice
+that closes the authorization gaps; Phases 4–5 when the product is stable
+enough to warrant a golden-set eval and CI wiring. The orchestrator will
+record the production slice's change folder in the Change folder column
+when that work opens.
 
 ## 4. Stack
 
@@ -104,17 +128,17 @@ date so future readers can see which lines need re-verification.
 | Layer | Tool | Version | Notes |
 |-------|------|---------|-------|
 | unit + integration | none yet — see §3 Phase 1 | — | No runner configured; 0 test files. Vitest is the natural fit for Astro + Vite (`overrides: vite ^7`); confirm setup via Context7 in Phase 1. |
-| API / provider mocking | none yet — see §3 Phase 1 | — | Mock the Anthropic SDK / HTTP edge only, never internal modules. Candidate: MSW or the SDK's own mock surface; verify in Phase 1. |
+| API / provider mocking | none yet — see §3 Phase 1 | — | Mock the `openai` HTTP layer (OpenRouter-compatible; `baseURL: https://openrouter.ai/api/v1`) only, never internal modules. Candidate: MSW intercepting that base URL or the `openai` package's own undocumented mock surface; verify in Phase 1. |
 | Worker route integration | none yet — see §3 Phase 1/2 | — | Astro API routes on workerd; integration via `wrangler`/`unstable_dev` or Astro's test container — to be grounded in Phase 1 research. |
 | DB / RLS integration | Supabase CLI (local stack) | 2.104.0 (dev dep) | Already present; `supabase db reset` + two-user RLS checks are the basis for Phase 3. |
 | e2e | none yet — see §3 Phase 5 | — | Playwright is the likely choice for the upload→identify→save critical flow; only one flow warrants e2e. |
 | (optional) AI-native | golden-set eval (custom) — checked: 2026-06-06 | n/a | When NOT to use: never assert exact description prose; never CI-gate it (provider cost + non-determinism). |
 
 **Stack grounding tools (current session):**
-- Docs: Context7 — available; use in Phase 1 to confirm current Vitest + Astro setup and the `@anthropic-ai/sdk` mock surface; checked: 2026-06-06
-- Search: Exa — available; use only to confirm current tool status, then prefer official docs; checked: 2026-06-06
+- Docs: Context7 — available; use in Phase 1 to confirm current Vitest + Astro setup and the `openai` SDK mock surface; checked: 2026-06-12
+- Search: Exa — available; use only to confirm current tool status, then prefer official docs; checked: 2026-06-12
 - Runtime/browser: Playwright MCP — not available in current session; e2e tooling chosen in Phase 5 research
-- Provider/platform: none exposed this session; Supabase CLI present locally as a dev dependency; Cloudflare `wrangler` present for bundle `--dry-run`; checked: 2026-06-06
+- Provider/platform: none exposed this session; Supabase CLI present locally as a dev dependency; Cloudflare `wrangler` present for bundle `--dry-run`; checked: 2026-06-12
 
 ## 5. Quality Gates
 
@@ -172,12 +196,13 @@ should respect these unless the underlying assumption changes.
 - **Generated Supabase types** (`src/types/supabase.ts`) — CLI-generated; the generator is the test. Re-evaluate if the file is ever hand-edited. (Source: Phase 2 interview Q5.)
 - **Marketing / static pages** (landing, index, welcome) — low-risk static content; snapshot tests break constantly and catch nothing. Re-evaluate if dynamic logic is added. (Source: Phase 2 interview Q5.)
 - **Exact AI description wording** — the literal prose the model returns is non-deterministic. Assert only the contract shape and the recognised / not-recognised distinction, never exact text. Re-evaluate never. (Source: Phase 2 interview Q5; reinforced by §2 Risk #1 anti-pattern.)
+- **Auth page routes and auth form components** (`/auth/signin`, `/auth/signup`, `/auth/confirm-email`, `SignInForm`, `SignUpForm`, and related) — Supabase handles the authentication logic; the app code is thin glue. Low blast radius; focus test budget on user-facing product flows instead. Re-evaluate if custom auth logic is added. (Source: Phase 2 refresh interview Q5, 2026-06-12.)
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-06-06
-- Stack versions last verified: 2026-06-06
-- AI-native tool references last verified: 2026-06-06
+- Strategy (§1–§5) last reviewed: 2026-06-12
+- Stack versions last verified: 2026-06-12
+- AI-native tool references last verified: 2026-06-12
 
 Refresh (`/10x-test-plan --refresh`) when:
 
