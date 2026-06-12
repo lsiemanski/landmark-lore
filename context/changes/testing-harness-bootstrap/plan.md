@@ -501,6 +501,8 @@ The existing `"test": "vitest run"` (all tests) remains unchanged.
 - `npm run test:integration` runs only the 2 integration tests (no unit tests)
 - `npm run build` passes (new helper files have no Astro impact)
 - `npx astro check` exits clean (new files are in `test/`, excluded from Astro's type check)
+- `npm run lint` exits clean (the new `test/helpers/**` files are covered by `eslint .`; this
+  gate was missing in the original Phase 5 criteria — see addendum)
 
 #### Manual Verification
 
@@ -511,6 +513,20 @@ The existing `"test": "vitest run"` (all tests) remains unchanged.
 **Implementation Note**: After completing this phase and all automated verification passes,
 pause here for manual confirmation from the human that the manual testing was successful. F-03
 is complete once this phase passes — S-01 may proceed.
+
+### Addendum (applied during Phase 5 impl-review)
+
+- **Missing lint gate**: Phase 5's original automated criteria omitted `npm run lint`, so the two
+  new helper files shipped in `eb1341a` were never linted — `eslint .` was actually red on master
+  (prettier formatting in `route.ts`, unsafe-return/assertions in `supabase-test.ts`). The gate is
+  now added above; both files were brought to lint-clean.
+- **F1 (createTestClient race)**: `createTestClient` was `void`-ing `auth.setSession(...)` inside a
+  synchronous factory — fire-and-forget, swallowing rejections and racing the token write for any
+  authed consumer. Made it `async` and `await` the session before returning so the seeded pattern
+  S-01/RLS tests inherit is correct.
+- **F2 (empty-key throw)**: `SUPABASE_KEY ?? ""` made `createClient` throw an opaque
+  "supabaseKey is required" when the env was unset. All three helpers now route through a guarded
+  `newClient()` that throws an explicit "SUPABASE_KEY is not set…" message instead.
 
 ---
 
@@ -611,12 +627,13 @@ pure refactor with no behaviour change. Existing runtime behaviour is unchanged.
 
 #### Automated
 
-- [x] 5.1 `npm run test:unit` runs exactly 6 tests (unit only)
-- [x] 5.2 `npm run test:integration` runs exactly 2 tests (integration only)
-- [x] 5.3 `npm run build` passes
-- [x] 5.4 `npx astro check` exits clean (Phase 5)
+- [x] 5.1 `npm run test:unit` runs exactly 6 tests (unit only) — eb1341a
+- [x] 5.2 `npm run test:integration` runs exactly 2 tests (integration only) — eb1341a
+- [x] 5.3 `npm run build` passes — eb1341a
+- [x] 5.4 `npx astro check` exits clean (Phase 5) — eb1341a
+- [x] 5.7 `npm run lint` exits clean (gate added in impl-review addendum) — a4fa868
 
 #### Manual
 
-- [ ] 5.5 `test/helpers/supabase-test.ts` and `test/helpers/route.ts` open without TS errors
-- [ ] 5.6 `test/integration/identify-route.test.ts` imports `makeAPIContext` from `../helpers/route`
+- [x] 5.5 `test/helpers/supabase-test.ts` and `test/helpers/route.ts` open without TS errors — eb1341a
+- [x] 5.6 `test/integration/identify-route.test.ts` imports `makeAPIContext` from `../helpers/route` — eb1341a
