@@ -31,7 +31,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 |------|------------------------------|-----------------------------------------------------------------------------------|----------------|-------------------------------|----------|
 | F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —              | FR-003, FR-006, FR-007        | done     |
 | F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | done     |
-| F-03 | testing-harness-bootstrap    | (foundation) Vitest runner configured; identification-contract integration tests pass | —           | —                             | ready    |
+| F-03 | testing-harness-bootstrap    | (foundation) Vitest runner configured; identification-contract integration tests pass | —           | —                             | done     |
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | planned |
 | S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01           | FR-005                        | proposed |
 | S-03 | archive-and-folders          | view their archive and manually move photos between folders                        | S-01           | FR-007                        | proposed |
@@ -100,7 +100,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Astro API routes run on workerd — the integration test approach (`wrangler`/`unstable_dev` vs. Astro test container) must be grounded in research before planning; the wrong choice leads to tests that pass locally but fail in the real Workers runtime.
-- **Status:** ready
+- **Status:** done
 
 ### S-01: Upload, identify, and save a photo
 
@@ -187,3 +187,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **F-01: (foundation) photos, folders, and identifications tables exist in Supabase** — Archived 2026-06-12 → `context/archive/2026-06-03-data-schema/`. Lesson: —.
 - **F-02: (foundation) AI provider chosen, key configured, test identification call verified** — Archived 2026-06-12 → `context/archive/2026-06-05-ai-provider-spike/`. Lesson: —.
+- **F-03: (foundation) Vitest runner configured; identification-contract integration tests pass** — Archived 2026-06-12 → `context/archive/2026-06-12-testing-harness-bootstrap/`. Lesson: —.
