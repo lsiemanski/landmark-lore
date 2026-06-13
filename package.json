@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "astro check",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",
@@ -69,7 +70,11 @@
     "vite": "^7.3.2"
   },
   "lint-staged": {
-    "*.{ts,tsx,astro}": [
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "vitest related --run"
+    ],
+    "*.astro": [
       "eslint --fix"
     ],
     "*.{json,css,md}": [
