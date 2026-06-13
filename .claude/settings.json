@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Linting edited file...",
+            "timeout": 60,
+            "command": "f=$(node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{try{const p=(JSON.parse(d).tool_input||{}).file_path||\"\";if(/\\.(ts|tsx|astro|js|jsx|mjs|cjs)$/.test(p))process.stdout.write(p)}catch(e){}})'); if [ -n \"$f\" ]; then npx eslint \"$f\" 1>&2 || exit 2; fi"
+          },
+          {
+            "type": "command",
+            "statusMessage": "Typechecking project...",
+            "timeout": 120,
+            "command": "npm run typecheck 1>&2 || exit 2"
+          },
+          {
+            "type": "command",
+            "statusMessage": "Running tests related to edit (Risk #1)...",
+            "timeout": 120,
+            "command": "node .claude/hooks/scoped-related-tests.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}

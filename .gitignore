@@ -63,8 +63,10 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# Claude
-.claude
+# Claude — ignore everything except the shared agent hooks
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 
 #mcp
 .mcp.json
