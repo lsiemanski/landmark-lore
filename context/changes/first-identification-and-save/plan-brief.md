@@ -17,33 +17,35 @@ A logged-in user visits `/dashboard`, is immediately presented with the upload f
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-|---|---|---|---|
-| Endpoint shape | Extend existing `identify.ts` (Option A) | Existing helpers absorb new concerns cleanly; no new route surface area needed at this scale | Research |
-| Idempotency | `request_id UUID UNIQUE` on `photos` table (Option 1a) | Converts the 100/day cap from "attempts" to "distinct successes"; prevents duplicate rows on retry | Plan |
-| Photo status model | Write-on-completion (no pending state) | AI call happens first; Storage + DB writes only on `recognised: true` — no rollback or cleanup needed for unrecognized results | Plan |
-| Progress feedback | Spinner + "Identifying…" status text | Satisfies the NFR (continuous visible feedback, result in-place) without SSE/streaming complexity | Plan |
-| Post-save destination | Inline result on `/upload` | No navigation needed; archive (S-03) can be added later without changing this flow | Plan |
-| Unrecognised UX | Do not save; quota slot consumed; "Try another photo" CTA | Archive only holds meaningful identified photos; no rollback/cleanup needed with write-on-completion | Plan |
-| Quota display | 429 error state only | Quota info is contextual; daily limit is high enough that proactive display adds friction without benefit | Plan |
-| Dashboard scope | CTA only (no archive grid) | Archive grid is S-03 scope; CTA alone is sufficient to make the save feel real | Plan |
-| Upload page | Embedded in `/dashboard` | Identification IS the app — surfacing it directly after login eliminates a navigation step; URL was never meaningful with inline-result display anyway | Plan |
-| Tests | Excluded — blocked on `testing-harness-bootstrap` | No test runner is set up yet; S-01 is blocked on that change completing first | Plan |
+| Decision              | Choice                                                    | Why (1 sentence)                                                                                                                                       | Source   |
+| --------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| Endpoint shape        | Extend existing `identify.ts` (Option A)                  | Existing helpers absorb new concerns cleanly; no new route surface area needed at this scale                                                           | Research |
+| Idempotency           | `request_id UUID UNIQUE` on `photos` table (Option 1a)    | Converts the 100/day cap from "attempts" to "distinct successes"; prevents duplicate rows on retry                                                     | Plan     |
+| Photo status model    | Write-on-completion (no pending state)                    | AI call happens first; Storage + DB writes only on `recognised: true` — no rollback or cleanup needed for unrecognized results                         | Plan     |
+| Progress feedback     | Spinner + "Identifying…" status text                      | Satisfies the NFR (continuous visible feedback, result in-place) without SSE/streaming complexity                                                      | Plan     |
+| Post-save destination | Inline result on `/upload`                                | No navigation needed; archive (S-03) can be added later without changing this flow                                                                     | Plan     |
+| Unrecognised UX       | Do not save; quota slot consumed; "Try another photo" CTA | Archive only holds meaningful identified photos; no rollback/cleanup needed with write-on-completion                                                   | Plan     |
+| Quota display         | 429 error state only                                      | Quota info is contextual; daily limit is high enough that proactive display adds friction without benefit                                              | Plan     |
+| Dashboard scope       | CTA only (no archive grid)                                | Archive grid is S-03 scope; CTA alone is sufficient to make the save feel real                                                                         | Plan     |
+| Upload page           | Embedded in `/dashboard`                                  | Identification IS the app — surfacing it directly after login eliminates a navigation step; URL was never meaningful with inline-result display anyway | Plan     |
+| Tests                 | Written in S-01 (F-03 harness has landed)                 | `testing-harness-bootstrap` shipped the runner + helpers and assigned Risk #3/#5/#6 to S-01; tests run via `npm test` (Phase 2/3 + CI gate)            | Plan     |
 
 ## Scope
 
 **In scope:**
+
 - `request_id` migration + type regeneration (Phase 1)
 - Extend `identify.ts` with Storage upload, DB inserts, idempotency check, unrecognised handling, `{ result, photoId }` response (Phase 2)
 - `UploadFlow.tsx` React component + embed in `dashboard.astro` as main content (Phase 3)
 
 **Out of scope:**
+
 - Streaming / SSE progress
 - Quota display outside the 429 state
 - Dashboard archive grid / thumbnail list (S-03)
 - `/photos/:id` detail page
 - Storage orphan cleanup
-- Integration test setup (`testing-harness-bootstrap`)
+- Test _infrastructure_ setup (already delivered by `testing-harness-bootstrap`; S-01 only writes new test cases)
 
 ## Architecture / Approach
 
@@ -51,20 +53,20 @@ The existing `identify.ts` handler is extended with new private helpers followin
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-|---|---|---|
-| 1. Schema migration | `request_id` column on `photos`; types regenerated | Migration must apply cleanly to a live Supabase stack |
-| 2. Backend | Full persist + idempotency in `identify.ts`; response extended to `{ result, photoId }` | Atomicity gap between Storage upload and DB insert (accepted MVP risk) |
-| 3. Production UI | `UploadFlow` component + embed in dashboard as main content | Getting all five UI states (idle/working/identified/unrecognized/error) polished in one phase |
+| Phase               | What it delivers                                                                        | Key risk                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1. Schema migration | `request_id` column on `photos`; types regenerated                                      | Migration must apply cleanly to a live Supabase stack                                         |
+| 2. Backend          | Full persist + idempotency in `identify.ts`; response extended to `{ result, photoId }` | Atomicity gap between Storage upload and DB insert (accepted MVP risk)                        |
+| 3. Production UI    | `UploadFlow` component + embed in dashboard as main content                             | Getting all five UI states (idle/working/identified/unrecognized/error) polished in one phase |
 
-**Prerequisites:** `testing-harness-bootstrap` must complete before any integration tests are written (S-01 itself proceeds without tests; the test slice is a hard dependency for future coverage).  
+**Prerequisites:** `testing-harness-bootstrap` (F-03) — **done** (archived 2026-06-12); its runner and helpers are reused by S-01's tests.  
 **Estimated effort:** ~2 sessions across 3 phases
 
 ## Open Risks & Assumptions
 
 - Storage upload and DB insert are not atomic — a crash between them leaves an orphan object in the `photos` bucket. This is accepted at MVP volume; cleanup is a future GDPR/S-03 concern.
 - The "Uncategorized" folder is assumed to exist for every user (created by the F-01 trigger). The `lookupDefaultFolder` helper throws 500 if it's missing, which should never happen in practice.
-- `testing-harness-bootstrap` must land before integration tests can be written; if it slips, S-01's test coverage gap widens.
+- Risk #3's "stored bytes == sent blob" test needs to observe the upload payload — via a recording storage mock (CI-friendly) or a real local-Supabase round-trip (`supabase start`); the choice affects whether CI needs a Supabase service.
 
 ## Success Criteria (Summary)
 

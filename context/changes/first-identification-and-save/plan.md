@@ -6,7 +6,7 @@ Extend the existing `identify.ts` endpoint to persist photo uploads and identifi
 
 ## Current State Analysis
 
-F-01 and F-02 are cleanly landed. The schema, storage bucket, typed client, AI endpoint, and client-side downscale harness are all in production. The `identify.ts` endpoint already handles auth, rate-limiting, and the OpenRouter AI call — but **persists nothing**. The `photos` and `identifications` tables and the private `photos` storage bucket are fully provisioned and waiting.
+F-01 and F-02 are cleanly landed, and F-03 (`testing-harness-bootstrap`) has since landed too. The schema, storage bucket, typed client, AI endpoint, and client-side downscale harness are all in production. The `identify.ts` endpoint already handles auth, rate-limiting, and the OpenRouter AI call — but **persists nothing**. Post-F-03 the endpoint is **114 lines** (down from 178): the AI logic was extracted into `src/lib/ai/identification.ts` and `identify.ts:5` now imports `identifyImage` from it. The `HttpError`/`jsonResponse` and quota helpers are still inline in `identify.ts`. The `photos` and `identifications` tables and the private `photos` storage bucket are fully provisioned and waiting.
 
 ## Desired End State
 
@@ -14,8 +14,8 @@ A logged-in user visits `/dashboard`, is immediately presented with the upload f
 
 ### Key Discoveries:
 
-- `requireAuthenticatedUser()` in `identify.ts:61` returns `user` but the caller at `identify.ts:28` discards it — S-01 must capture it for storage path and `photos` INSERT
-- `readImageAsBase64` at `identify.ts:69` reads the `ArrayBuffer` and discards it after converting to base64 — S-01 needs both the base64 string (for AI) and the raw bytes (for Storage upload); the helper must be refactored
+- `requireAuthenticatedUser()` in `identify.ts:46` returns `user` but the caller at `identify.ts:13` discards it — S-01 must capture it for storage path and `photos` INSERT
+- `readImageAsBase64` at `identify.ts:54` reads the `ArrayBuffer` and discards it after converting to base64 — S-01 needs both the base64 string (for AI) and the raw bytes (for Storage upload); the helper must be refactored
 - `identifications.photo_id` is `UNIQUE` (one-to-one) — attempting a second INSERT for the same `photo_id` will throw a constraint violation; idempotency at the `photos.request_id` level prevents reaching this
 - `folders` has a trigger that auto-creates an "Uncategorized" folder for every new auth user — every user already has one; `photos.folder_id` is NOT NULL RESTRICT, so it must be looked up before INSERT
 - Storage and DB writes are not atomic — a crash after `storage.upload()` but before `photos` INSERT leaves an orphan object; this is an accepted MVP risk at the current volume
@@ -29,7 +29,6 @@ A logged-in user visits `/dashboard`, is immediately presented with the upload f
 - Saving unrecognized photos (the AI call consumes a quota slot; no photo row or identifications row is created)
 - Auto-retry on identification failure (user re-initiates)
 - Cleanup of orphaned Storage objects on crash (accepted MVP risk, future S-03/GDPR)
-- Integration test setup (blocked on `testing-harness-bootstrap` slice)
 - A detail page at `/photos/:id` (inline result on the dashboard is sufficient for S-01)
 - A dedicated `/upload` route (the upload form lives on the dashboard)
 
@@ -86,18 +85,20 @@ Add a nullable `request_id UUID UNIQUE` column to the `photos` table via a new m
 
 ### Overview
 
-Extend the identify endpoint with persistence, idempotency, and upload handling. Adding all helpers to `identify.ts` would push it well past 250 lines (lessons.md: "Keep files under 250 lines"), so the work is split across new modules by single responsibility. The handler file becomes thin orchestration only.
+Extend the identify endpoint with persistence, idempotency, and upload handling. `identify.ts` is already 114 lines post-F-03 (the AI logic is in `src/lib/ai/identification.ts`); adding the upload, persistence, and idempotency helpers inline would push it back past the 250-line ceiling (lessons.md: "Keep files under 250 lines"), so the remaining concerns are split across new modules by single responsibility. The handler file becomes thin orchestration only.
 
 **New file layout:**
 
-| File | Responsibility | Est. lines |
-|---|---|---|
-| `src/lib/api/http.ts` | `HttpError`, `jsonResponse` — moved out of `identify.ts`; reusable by any API route | ~20 |
-| `src/lib/identify/upload.ts` | `parseUploadRequest`, `encodeForAI` | ~30 |
-| `src/lib/identify/quota.ts` | `currentPeriod`, `consumeSlot`, `refundSlot` — moved from `identify.ts` | ~25 |
-| `src/lib/identify/ai.ts` | `IdentificationResult` (type + guard), `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` — moved from `identify.ts`, with output typing/validation added | ~70 |
-| `src/lib/identify/persistence.ts` | `checkIdempotencyCache`, `lookupDefaultFolder`, `uploadPhotoToStorage`, `persistPhotoAndIdentification` | ~85 |
-| `src/pages/api/identify.ts` | `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, `POST` handler | ~50 |
+| File                                                          | Responsibility                                                                                                                                                                                                                                                                                                                     | Est. lines |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `src/lib/api/http.ts`                                         | `HttpError`, `jsonResponse` — moved out of `identify.ts`; reusable by any API route                                                                                                                                                                                                                                                | ~20        |
+| `src/lib/identify/upload.ts`                                  | `parseUploadRequest`, `encodeForAI`                                                                                                                                                                                                                                                                                                | ~30        |
+| `src/lib/identify/quota.ts`                                   | `currentPeriod`, `consumeSlot`, `refundSlot` — moved from `identify.ts`                                                                                                                                                                                                                                                            | ~25        |
+| `src/lib/ai/identification.ts` _(exists — extracted by F-03)_ | Already holds `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and the `IdentificationResult` interface. S-01 edits it **in place** — no move, no new file: add an `isIdentificationResult` guard and change `identifyImage`'s return from `Promise<unknown>` → `Promise<IdentificationResult>`. | ~+15       |
+| `src/lib/identify/persistence.ts`                             | `checkIdempotencyCache`, `lookupDefaultFolder`, `uploadPhotoToStorage`, `persistPhotoAndIdentification`                                                                                                                                                                                                                            | ~85        |
+| `src/pages/api/identify.ts`                                   | `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, `POST` handler                                                                                                                                                                                                                                               | ~50        |
+
+**Directory convention:** the AI module stays in `src/lib/ai/` (F-03's established home — see Phase 2 §0); the new request-glue modules (`upload.ts`, `quota.ts`, `persistence.ts`) live under a new `src/lib/identify/`. This is a deliberate split by concern — `src/lib/ai/` holds model/prompt/identification logic, `src/lib/identify/` holds the route's upload/persistence plumbing — chosen over relocating `identification.ts` (which would break the F-03 unit tests that import `@/lib/ai/identification`).
 
 The response extends from `{ result }` to `{ result, photoId? }`.
 
@@ -105,13 +106,15 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 #### 0. Move existing concerns to new modules
 
-**Files created**: `src/lib/api/http.ts`, `src/lib/identify/ai.ts`, `src/lib/identify/quota.ts`
+**Files created**: `src/lib/api/http.ts`, `src/lib/identify/quota.ts`
+**File edited (already exists)**: `src/lib/ai/identification.ts`
 
-**Intent**: Before adding new helpers, relocate the existing private functions from `identify.ts` into their single-responsibility homes. This keeps the handler file within the 250-line ceiling as new helpers land.
+**Intent**: Before adding new helpers, relocate the still-inline private functions from `identify.ts` into their single-responsibility homes. **Note:** F-03 already extracted the AI logic into `src/lib/ai/identification.ts` (`identify.ts:5` imports `identifyImage` from it), so the AI module is _edited in place_, not moved. This keeps the handler file within the 250-line ceiling as new helpers land.
 
 **Contract**:
+
 - `src/lib/api/http.ts` — receives `HttpError` and `jsonResponse` (verbatim move, no logic change). Export both; update the import in `identify.ts`.
-- `src/lib/identify/ai.ts` — receives `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages`. **Not a verbatim move:** add an exported `IdentificationResult` type (`{ recognised: boolean; subjectName: string; description: string }`) and a narrowing guard (e.g. `isIdentificationResult(value: unknown): value is IdentificationResult`). Change `identifyImage`'s signature from `Promise<unknown>` to `Promise<IdentificationResult>`: after `JSON.parse`, run the guard and throw on failure so the handler's outer try/catch refunds the slot and returns 502. This closes the `npx astro check` gap (the handler and persistence read `result.recognised` / `result.subjectName` / `result.description` off a typed value) and guarantees the json_object fallback path — which is **not** schema-enforced — can never write malformed values into the NOT NULL `identifications` columns. Prefer a hand-rolled guard over a validation dependency to stay within the Workers 1 MB bundle limit (re-confirm via the Phase 2 `wrangler deploy --dry-run`, criterion 2.3). Export `identifyImage` and `IdentificationResult`; `identificationSchema`, `requestIdentification`, `visionMessages` stay private to the module.
+- `src/lib/ai/identification.ts` — **already exists (F-03 extraction); edit in place, do not create a new file and do not move anything.** It already contains `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and exports the `IdentificationResult` interface (`{ recognised: boolean; subjectName: string; description: string }`, `identification.ts:20-24`). S-01's remaining work: (a) add a narrowing guard `isIdentificationResult(value: unknown): value is IdentificationResult`; (b) change `identifyImage`'s return from `Promise<unknown>` (`identification.ts:26`) to `Promise<IdentificationResult>` — after `JSON.parse`, run the guard and throw on failure so the handler's outer try/catch refunds the slot and returns 502. This closes the `npx astro check` gap (the handler and persistence read `result.recognised` / `result.subjectName` / `result.description` off a typed value) and guarantees the json_object fallback path — which is **not** schema-enforced — can never write malformed values into the NOT NULL `identifications` columns. Prefer a hand-rolled guard over a validation dependency to stay within the Workers 1 MB bundle limit (re-confirm via the Phase 2 `wrangler deploy --dry-run`, criterion 2.3). **Keep the module path `@/lib/ai/identification`** — `test/unit/identification.test.ts` (6 tests) imports from it; moving the file would break them.
 - `src/lib/identify/quota.ts` — receives `currentPeriod`, `consumeSlot`, `refundSlot` (verbatim move). Export all three.
 - `src/pages/api/identify.ts` — retains only `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, and the `POST` handler; imports everything else from the new modules.
 
@@ -178,6 +181,7 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 **Intent**: Wire the new helpers into the handler in the correct order. Storage and DB writes now happen only after a successful `recognised: true` AI result — nothing is written for unrecognized outcomes.
 
 **Contract**: Updated handler sequence:
+
 1. `requireApiKey()`
 2. `requireSupabaseClient()`
 3. `const user = requireAuthenticatedUser(supabase)`
@@ -195,6 +199,22 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 Response type: `{ result: IdentificationResult; photoId?: string }` — `photoId` is present only when the photo was saved (i.e., `recognised: true`). The client uses the presence of `photoId` to determine whether to show the "Saved" confirmation.
 
+#### 9. Update the existing route integration test
+
+**File**: `test/integration/identify-route.test.ts` (exists — created by F-03)
+
+**Intent**: F-03's route test mocks Supabase with only `auth.getUser()` + `rpc()` and its `makeFormData()` sends no `request_id`. The S-01 handler changes (idempotency check, folder lookup, Storage upload, two inserts, and the mandatory `request_id`) will make the existing "returns 200 recognised: true" test go red — and the husky pre-commit (`vitest related --run`) will block the commit until it's fixed. Update it alongside the handler.
+
+**Contract**: Extend the `vi.mock('@/lib/supabase')` factory so the mock client also implements the persistence calls S-01 adds — `from('photos')`/`from('folders')`/`from('identifications')` (select + insert) and `storage.from('photos').upload()` — returning success shapes (e.g. idempotency select returns no cached row; folder select returns `{ id }`; inserts return `{ error: null }`; upload returns `{ error: null }`). Add `request_id` (a valid UUID) to `makeFormData()`. The recognised-true test now asserts the response body is `{ result, photoId }` (a non-empty `photoId`); the recognised-false test asserts `{ result }` with **no** `photoId` and that no insert/upload mock was called. This stays a mocked-Supabase test (no `supabase start` needed) so it runs in pre-commit and CI.
+
+#### 10. Wire the test suite into CI before deploy
+
+**File**: `.github/workflows/ci.yml`
+
+**Intent**: CI currently runs only `astro sync` + `lint` + `build`; the `deploy` and `preview` jobs (`needs: ci`) ship without running any tests. Add the suite as a gate so a red test blocks deployment.
+
+**Contract**: Add a `- run: npm test` step to the `ci` job (after `npm run lint`, before or after `npm run build`). Because `deploy`/`preview` already declare `needs: ci`, gating the `ci` job is sufficient — no change to the deploy jobs. The current suite (6 unit + 2 mocked-Supabase integration tests) needs no live Supabase, so `npm test` runs green on the stock GitHub runner. **Caveat:** if S-01's Risk #3 test (Testing Strategy) is implemented against a _real_ local Supabase, CI will need a Supabase service/container before that test can run there — call that out when that test lands (see Open Question on Risk #3 storage assertion in `research.md`).
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -202,6 +222,7 @@ Response type: `{ result: IdentificationResult; photoId?: string }` — `photoId
 - TypeScript compiles without error: `npx astro check`
 - Lint passes: `npm run lint`
 - Workers bundle dry-run succeeds within size budget: `npx wrangler deploy --dry-run`
+- Full test suite passes (incl. the updated route test): `npm test`
 
 #### Manual Verification:
 
@@ -211,6 +232,7 @@ Response type: `{ result: IdentificationResult; photoId?: string }` — `photoId
 - A POST with an invalid/unsupported MIME type returns 415
 - Sending a request after the daily cap is exhausted returns 429 with `{ error, limit, used }` in the body
 - A photo where Gemini returns `recognised: false` creates NO `photos` row and NO `identifications` row; the quota slot is consumed (no refund)
+- `.github/workflows/ci.yml` `ci` job runs `npm test`, so a red test fails CI and blocks the `deploy`/`preview` jobs (`needs: ci`)
 
 **Implementation Note**: After automated checks pass, verify all six manual scenarios above. The idempotency check in particular must be verified by inspecting the `photos` table — the response alone does not prove dedup. Pause for human confirmation before proceeding to Phase 3.
 
@@ -246,9 +268,10 @@ Update the dashboard to mount `UploadFlow` as its main content and build the `Up
 
 **Intent**: The production upload/identify/save UI. Handles five distinct UI states using a state-machine approach: `idle`, `working`, `identified`, `unrecognized`, and `error`. Generates a fresh `requestId` per identify action. Uses `downscale` from `@/lib/client/downscale` and posts to `/api/identify`.
 
-**Contract**: 
+**Contract**:
 
 State transitions:
+
 - `idle` → `working` on "Identify" click (generates `crypto.randomUUID()` as `requestId`)
 - `working` → `identified` on successful response with `result.recognised = true`
 - `working` → `unrecognized` on successful response with `result.recognised = false`
@@ -258,6 +281,7 @@ State transitions:
 - `error` → `idle` on "Try again" CTA
 
 State-specific UI:
+
 - **`idle`**: file input (accept same MIME types as `IDENTIFY_CONFIG.allowedTypes`) + disabled "Identify" button until a file is selected
 - **`working`**: photo preview (`<img src={URL.createObjectURL(photo)} />`, CSS max-width to fit layout — no Storage fetch) + spinner + "Identifying…" text; button disabled; no auto-retry
 - **`identified`**: photo preview (same local object URL, same CSS constraint) + subject name (heading) + description (body text) + "Saved to your archive" confirmation badge + "Identify another" CTA
@@ -272,6 +296,7 @@ The component generates a new `requestId = crypto.randomUUID()` at the moment th
 FormData sent to `/api/identify`: `{ photo: downsizedBlob, request_id: requestId }`.
 
 Expected response shapes:
+
 - Recognised: `{ result: { recognised: true; subjectName: string; description: string }; photoId: string }` — show result + "Saved" confirmation
 - Unrecognized: `{ result: { recognised: false; subjectName: string; description: string } }` — no `photoId`; show "couldn't identify" panel; nothing was persisted
 - Quota: `{ error: string; limit: number; used: number }` with HTTP 429
@@ -286,6 +311,7 @@ The component uses the presence of `photoId` in the response (not `result.recogn
 - TypeScript compiles without error: `npx astro check`
 - Lint passes: `npm run lint`
 - Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
+- Full test suite passes: `npm test`
 
 #### Manual Verification:
 
@@ -305,14 +331,14 @@ The component uses the presence of `photoId` in the response (not `result.recogn
 
 ## Testing Strategy
 
-Integration tests for the extended endpoint are **blocked on the `testing-harness-bootstrap` change**, which must land first. Once the test runner is bootstrapped, the following scenarios from the test-plan (§2 Risk Map) should be covered for S-01:
+`testing-harness-bootstrap` (F-03) has **landed** (archived 2026-06-12) — the runner (Vitest + MSW), the route-test pattern, and the shared helpers all exist, so S-01 writes its tests as part of this change. F-03 deliberately scoped Risk #3/#5/#6 _out_ of itself and assigned them to S-01 (see `context/archive/2026-06-12-testing-harness-bootstrap/plan.md` "What We're NOT Doing"). Cover these test-plan (§2 Risk Map) scenarios, reusing the existing helpers rather than building new infrastructure:
 
-- **Risk #1 / #4**: `recognised: false` always surfaces the unrecognised state; a malformed AI response yields a graceful 502, not a fabricated success
-- **Risk #3**: The bytes uploaded to Storage match the downscaled blob that was sent to `/api/identify` (the single 2048px client-downscaled copy — by design the original is never uploaded; the same blob serves both the AI call and Storage)
-- **Risk #5**: An unauthenticated request is rejected before any quota slot is consumed
-- **Risk #6**: Disallowed MIME type and oversized payload are rejected server-side regardless of client claims
+- **Risk #1 / #4** — `recognised: false` surfaces the unrecognised state; a malformed AI response yields a graceful 502, not a fabricated success. _Largely covered already_ by `test/unit/identification.test.ts` (F-03); S-01's `isIdentificationResult` guard (Phase 2 §0) adds the "malformed/partial JSON → throw" case there, asserted via an MSW handler built with `makeCompletionResponse` (`test/helpers/openrouter.ts`).
+- **Risk #5** — an unauthenticated request is rejected before any quota slot is consumed. Mocked-Supabase route test (`vi.mock('@/lib/supabase')` with `auth.getUser()` → no user; assert 401 and that `rpc('try_consume_image_usage')` was never called), using `makeAPIContext` (`test/helpers/route.ts`).
+- **Risk #6** — disallowed MIME type and oversized payload are rejected server-side regardless of client claims. Mocked-Supabase route test driving `parseUploadRequest` (assert 415 / 413). No network or Supabase round-trip needed.
+- **Risk #3** — the bytes uploaded to Storage match the downscaled blob that was sent to `/api/identify` (the single 2048px client-downscaled copy; by design the original is never uploaded). This needs to observe the actual upload payload: either a **recording storage mock** (extend the `vi.mock('@/lib/supabase')` factory so `storage.from('photos').upload` captures its `arrayBuffer` argument, then assert it equals the posted bytes — no live Supabase, runs in CI) **or** a **real local-Supabase** round-trip via `createTestClient` (`test/helpers/supabase-test.ts`, requires `supabase start` and a Supabase service in CI). Decide per the Open Question in `research.md`; the recording-mock path is preferred to keep CI free of a Supabase dependency.
 
-These test cases should be written as the first deliverable of `testing-harness-bootstrap`.
+All four risks live alongside the F-03 suite under `test/unit/**` and `test/integration/**` and run via `npm test` (the Phase 2/3 automated gate and the new CI gate). Note the **existing** F-03 route test must be updated in lockstep with the handler — see Phase 2 §9.
 
 ## Performance Considerations
 
@@ -358,6 +384,7 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 - [ ] 2.1 TypeScript compiles: `npx astro check`
 - [ ] 2.2 Lint passes: `npm run lint`
 - [ ] 2.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
+- [ ] 2.10 Full test suite passes (incl. updated route test): `npm test`
 
 #### Manual
 
@@ -367,6 +394,7 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 - [ ] 2.7 POST with invalid MIME type returns 415
 - [ ] 2.8 POST after cap exhausted returns 429 with `{ error, limit, used }`
 - [ ] 2.9 Unrecognised photo: API returns `{ result }` with no `photoId`; no `photos` row or `identifications` row created; quota slot consumed (no refund)
+- [ ] 2.11 `ci.yml` `ci` job runs `npm test`, gating `deploy`/`preview` (`needs: ci`)
 
 ### Phase 3: Production UI
 
@@ -375,6 +403,7 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 - [ ] 3.1 TypeScript compiles: `npx astro check`
 - [ ] 3.2 Lint passes: `npm run lint`
 - [ ] 3.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
+- [ ] 3.13 Full test suite passes: `npm test`
 
 #### Manual
 

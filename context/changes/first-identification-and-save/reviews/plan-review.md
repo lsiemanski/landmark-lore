@@ -1,93 +1,82 @@
 <!-- PLAN-REVIEW-REPORT -->
+
 # Plan Review: First Identification and Save (S-01)
 
 - **Plan**: context/changes/first-identification-and-save/plan.md
-- **Mode**: Deep
-- **Date**: 2026-06-12
-- **Verdict**: REVISE → SOUND after fixes (all 6 findings fixed in plan)
-- **Findings**: 2 critical, 3 warnings, 1 observation
+- **Mode**: Deep (re-review after `testing-harness-bootstrap` / F-03 landed)
+- **Date**: 2026-06-13
+- **Verdict**: REVISE → SOUND after fixes (all 5 findings fixed)
+- **Findings**: 2 critical, 2 warnings, 1 observation
+
+> Re-review context: the prior plan-review (2026-06-12) brought this plan to SOUND against the
+> _pre-F-03_ codebase (its F2 cited `identifyImage` at `identify.ts:110-117`). F-03 has since
+> landed and been archived, moving the ground under several plan assumptions. All five findings
+> below share that single root cause; every fix is a targeted re-grounding edit, not a redesign.
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| End-State Alignment | WARNING |
-| Lean Execution | WARNING |
-| Architectural Fitness | PASS |
-| Blind Spots | WARNING |
-| Plan Completeness | FAIL |
+| Dimension             | Verdict (pre-fix) | After fixes |
+| --------------------- | ----------------- | ----------- |
+| End-State Alignment   | WARNING           | PASS        |
+| Lean Execution        | PASS              | PASS        |
+| Architectural Fitness | FAIL              | PASS        |
+| Blind Spots           | FAIL              | PASS        |
+| Plan Completeness     | WARNING           | PASS        |
 
 ## Grounding
 
-5/5 paths ✓ (identify.ts, schema migration, downscale.ts, types/supabase.ts, IdentifyHarness.tsx), 5/5 symbols ✓ (consumeSlot, refundSlot, currentPeriod, IDENTIFY_CONFIG, photo_status enum), brief↔plan ✓ (minor brief staleness: brief row labels post-save destination "/upload" while the plan correctly uses the dashboard).
+7/7 paths ✓ (identify.ts, identification.ts, downscale.ts, dashboard.astro, config.ts, identify-route.test.ts, schema migration), 4/4 symbols ✓ (`IDENTIFY_CONFIG.{allowedTypes,maxBytes,dailyImageLimit}`, `requireAuthenticatedUser`, `identifyImage`, `IdentificationResult`). `src/lib/identify/` + `src/lib/api/` correctly absent (to be created). brief↔plan ⚠️ — brief was stale on tests (fixed under F3). Extra checks: `.husky/pre-commit` runs `lint-staged` → `vitest related --run` on staged `*.{ts,tsx}`; `.github/workflows/ci.yml` runs no tests (lint + build only) — both informed F2.
 
 ## Findings
 
-### F1 — Success criterion contradicts the "don't persist unrecognized" design
+### F1 — Phase 2 §0 plans to extract AI logic that F-03 already extracted
 
 - **Severity**: ❌ CRITICAL
-- **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: Plan Completeness
-- **Location**: Phase 2 — Manual Verification (plan.md:213)
-- **Detail**: Line 213 said an unrecognised photo creates a `photos` row with `status='unrecognized'`. Every other part of the plan and the brief say nothing is persisted for unrecognized. Leftover from an earlier status model; could mislead the implementer into building forbidden persistence.
-- **Fix**: Rewrote the bullet to match Progress 2.9 — no rows created, quota slot consumed (no refund).
-- **Decision**: FIXED
+- **Impact**: 🔬 HIGH — architectural stakes
+- **Dimension**: Architectural Fitness
+- **Location**: Phase 2 §0 + file-layout table (plan.md:98, 106-116); Current State (plan.md:9)
+- **Detail**: F-03 already moved `identifyImage`/`requestIdentification`/`visionMessages`/`identificationSchema` into `src/lib/ai/identification.ts`; `identify.ts:5` imports it; the `IdentificationResult` interface already exists (`identification.ts:20-24`). Executing §0 verbatim finds nothing to move, duplicates the module at a new path, and breaks the 6 unit tests importing `@/lib/ai/identification`. Only the guard + return-type tightening genuinely remain.
+- **Fix**: Re-pointed the `ai.ts` table row and §0 at the existing `src/lib/ai/identification.ts` (edit in place — no move, no new file); kept only the `isIdentificationResult` guard + `Promise<unknown>` → `Promise<IdentificationResult>` change; added an explicit "keep the path / tests import it" warning.
+- **Decision**: FIXED (Fix in plan)
 
-### F2 — Plan assumes a typed `IdentificationResult`, but `identifyImage` returns `unknown`
+### F2 — Existing F-03 route test breaks; Phase 2/3 gates don't run the suite
 
 - **Severity**: ❌ CRITICAL
-- **Impact**: 🔎 MEDIUM — real tradeoff; pause to reason through it
-- **Dimension**: Plan Completeness
-- **Location**: Phase 2 §0 (ai.ts move), handler steps 10/13, persistence §7
-- **Detail**: `identifyImage` (identify.ts:110-117) returns `unknown`; no `IdentificationResult` type exists in the API layer. A "verbatim move" + reading `result.recognised`/`subjectName` breaks `npx astro check` (criterion 2.1). The json_object fallback (133-139) is not schema-enforced, so unvalidated fields could reach the NOT NULL `identifications` columns.
-- **Fix A ⭐ Recommended**: Define `IdentificationResult` in ai.ts and parse-and-validate (hand-rolled guard, dependency-free) in `identifyImage` before returning it typed; throw on failure so the slot is refunded and 502 returned.
-  - Strength: Closes the type gap AND the unvalidated-persist blind spot in one move.
-  - Tradeoff: Slightly more than a relocation; bundle cost re-confirmed via Phase 2 wrangler dry-run.
-  - Confidence: HIGH — fallback path genuinely bypasses schema enforcement.
-  - Blind spot: Validation-lib bundle cost — avoided by using a hand-rolled guard.
-- **Fix B**: Define type + cast only, no runtime validation.
-  - Strength: Minimal, no dependency.
-  - Tradeoff: Leaves the malformed-response blind spot.
-  - Confidence: MED.
-  - Blind spot: Partial-JSON behaviour untested.
-- **Decision**: FIXED via Fix A
-
-### F3 — MIME (415) and size (413) validation may be dropped in the refactor
-
-- **Severity**: ⚠️ WARNING
-- **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
+- **Impact**: 🔬 HIGH — architectural stakes
 - **Dimension**: Blind Spots
-- **Location**: Phase 2 §1 parseUploadRequest (plan.md:118-124)
-- **Detail**: `readImageAsBase64` (identify.ts:69-80) does File-instance + allowedTypes (415) and maxBytes (413) checks. The new parseUploadRequest contract only specified a 400 for request_id; criterion 2.7 expects 415 for invalid MIME.
-- **Fix**: Extended the parseUploadRequest contract to preserve the 415 (File/allowedTypes) and 413 (maxBytes) checks.
-- **Decision**: FIXED
+- **Location**: Phase 2 handler steps (plan.md:180-194); Success Criteria (plan.md:200-204, 284-288)
+- **Detail**: `test/integration/identify-route.test.ts` mocks only `auth.getUser()` + `rpc()` and sends no `request_id`. S-01's recognised:true path calls idempotency/folder/storage/two inserts (none mocked) and `parseUploadRequest` throws 400 without `request_id` — the existing test goes red. No plan task updated it, and Phase 2/3 automated gates ran only astro check + lint + wrangler dry-run, so the regression would ship silently. (The husky pre-commit `vitest related --run` would in fact block the commit; CI runs no tests at all.)
+- **Fix**: Added Phase 2 §9 (update `identify-route.test.ts`: extend the mock for persistence, add `request_id`, assert `{ result, photoId }`); added Phase 2 §10 (wire `npm test` into `ci.yml` `ci` job so `deploy`/`preview` are gated); added `npm test` to Phase 2 + Phase 3 automated criteria and a CI manual check; added Progress items 2.10, 2.11, 3.13. Resolved per the user's "full npm test gate + CI pre-deploy gate" direction.
+- **Decision**: FIXED (Fix differently — full `npm test` gate + route-test task + CI wiring)
 
-### F4 — `MAX_EDGE` 1024→2048 change has no phase, criterion, or checkbox
+### F3 — Testing Strategy treats F-03 as an unlanded blocker (and contradicts it)
+
+- **Severity**: ⚠️ WARNING
+- **Impact**: 🔎 MEDIUM — real tradeoff
+- **Dimension**: End-State Alignment
+- **Location**: What We're NOT Doing (plan.md:32); Testing Strategy (plan.md:306-315); brief (31, 46, 60, 67)
+- **Detail**: Plan said tests are "blocked on testing-harness-bootstrap … must land first" and "should be written as the first deliverable of testing-harness-bootstrap." F-03 has landed AND explicitly assigned Risk #3/#5/#6 to S-01. The brief carried the same stale framing.
+- **Fix**: Removed the stale "NOT Doing" line; rewrote Testing Strategy as actionable, mapping each risk to its F-03 helper (`makeCompletionResponse`/`makeAPIContext`/`createTestClient`) and the recording-mock-vs-real-Supabase choice for Risk #3; updated all four stale brief rows.
+- **Decision**: FIXED (Fix in plan + brief)
+
+### F4 — Current State / Key Discoveries cite stale line numbers & a 178-line file
 
 - **Severity**: ⚠️ WARNING
 - **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Plan Completeness
-- **Location**: Implementation Approach (plan.md:40); absent from Phase 3 Changes
-- **Detail**: The store-what-we-send strategy depends on MAX_EDGE=2048 (still 1024 at downscale.ts:10), but no phase listed editing downscale.ts, no criterion, no Progress checkbox.
-- **Fix**: Added a Phase 3 change #0 (edit downscale.ts: MAX_EDGE 1024→2048), a matching success-criteria bullet, and Progress item 3.12.
-- **Decision**: FIXED
+- **Location**: Current State (plan.md:9); Key Discoveries (plan.md:17-18); Phase 2 premise (plan.md:89)
+- **Detail**: Post-F-03 `identify.ts` is 114 lines (not 178) and no longer contains the AI logic; cited line numbers for `requireAuthenticatedUser` (:61→:46) and `readImageAsBase64` (:69→:54) are stale; the "past 250 lines" framing is softer.
+- **Fix**: Refreshed the line numbers, the 178→114 count, and the Phase 2 line-ceiling framing; noted `identify.ts:5` already imports `identifyImage` from `@/lib/ai/identification`.
+- **Decision**: FIXED (Fix in plan)
 
-### F5 — Testing-strategy Risk #3 contradicts the "store the downscaled copy" design
-
-- **Severity**: ⚠️ WARNING
-- **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: End-State Alignment
-- **Location**: Testing Strategy (plan.md:302)
-- **Detail**: Risk #3 said the stored bytes must match the original file (not the downsized copy), but the design uploads the 2048px downscaled blob — the test asserted the opposite of intended behaviour.
-- **Fix**: Reworded Risk #3 to assert the stored object is the downscaled blob that was sent.
-- **Decision**: FIXED
-
-### F6 — `checkIdempotencyCache` handles a `status='error'` row this plan never creates
+### F5 — Directory-convention split: src/lib/ai/ vs proposed src/lib/identify/
 
 - **Severity**: 💡 OBSERVATION
-- **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: Lean Execution
-- **Location**: Phase 2 §4 (plan.md:146-148)
-- **Detail**: The contract handled a `status='error'` fall-through, but no S-01 path writes that status (persistence only writes 'identified'; unrecognized writes nothing). Dead logic.
-- **Fix**: Dropped the status='error' branch from the Intent and Contract, with a one-line note that it would only matter if a future slice introduces a partial-write/error state.
-- **Decision**: FIXED
+- **Impact**: 🔎 MEDIUM — real tradeoff
+- **Dimension**: Architectural Fitness
+- **Location**: Phase 2 file-layout table (plan.md:96-99)
+- **Detail**: F-03 established `src/lib/ai/` as the home; the plan adds a parallel `src/lib/identify/`. Since the AI module must stay in `src/lib/ai/` (F1), the feature's code spans two sibling dirs.
+- **Fix A ⭐ Recommended**: New modules go in `src/lib/identify/`; AI concerns stay in `src/lib/ai/`. Minimal churn, no test/import breakage.
+- **Fix B**: Consolidate upload/quota/persistence under `src/lib/ai/` too — one dir, but "ai" becomes a misnomer.
+- **Fix**: Added a "Directory convention" note after the file-layout table explaining the deliberate split-by-concern and why `identification.ts` isn't relocated.
+- **Decision**: FIXED via Fix A
