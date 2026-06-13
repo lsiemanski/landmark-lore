@@ -81,7 +81,7 @@ const testConfig = tseslint.config({
 
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
-  { ignores: ["src/types/supabase.ts"] },
+  { ignores: ["src/types/supabase.ts", ".claude/**"] },
   baseConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
