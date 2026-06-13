@@ -102,6 +102,7 @@ export interface Database {
           id: string;
           mime_type: string;
           original_filename: string;
+          request_id: string | null;
           status: Database["public"]["Enums"]["photo_status"];
           storage_path: string;
           updated_at: string;
@@ -114,6 +115,7 @@ export interface Database {
           id?: string;
           mime_type: string;
           original_filename: string;
+          request_id?: string | null;
           status?: Database["public"]["Enums"]["photo_status"];
           storage_path: string;
           updated_at?: string;
@@ -126,6 +128,7 @@ export interface Database {
           id?: string;
           mime_type?: string;
           original_filename?: string;
+          request_id?: string | null;
           status?: Database["public"]["Enums"]["photo_status"];
           storage_path?: string;
           updated_at?: string;

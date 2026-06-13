@@ -368,14 +368,14 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly: `supabase db reset`
-- [ ] 1.2 TypeScript compiles: `npx astro check`
-- [ ] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `supabase db reset`
+- [x] 1.2 TypeScript compiles: `npx astro check`
+- [x] 1.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.4 `supabase db diff` shows no unexpected drift after reset
-- [ ] 1.5 `photos` table in Supabase Studio shows `request_id` column as nullable UUID
+- [x] 1.4 `supabase db diff` shows no unexpected drift after reset
+- [x] 1.5 `photos` table in Supabase Studio shows `request_id` column as nullable UUID
 
 ### Phase 2: Backend — persistence + idempotency
 

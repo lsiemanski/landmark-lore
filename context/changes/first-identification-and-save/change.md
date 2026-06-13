@@ -1,7 +1,7 @@
 ---
 change_id: first-identification-and-save
 title: First identification and save (S-01)
-status: plan_reviewed
+status: implementing
 created: 2026-06-11
 updated: 2026-06-13
 archived_at: null
