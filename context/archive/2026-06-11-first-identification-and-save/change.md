@@ -1,10 +1,10 @@
 ---
 change_id: first-identification-and-save
 title: First identification and save (S-01)
-status: implemented
+status: archived
 created: 2026-06-11
 updated: 2026-06-14
-archived_at: null
+archived_at: 2026-06-14T02:14:30Z
 ---
 
 ## Notes
