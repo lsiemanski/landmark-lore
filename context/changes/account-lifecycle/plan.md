@@ -478,27 +478,27 @@ For local dev, add it to `.env.local` (which is gitignored).
 #### Manual
 
 - [x] 2.3 "Delete account" option is visible in the account dropdown menu on the dashboard
-- [ ] 2.4 Clicking it opens the password modal
+- [x] 2.4 Clicking it opens the password modal
 - [x] 2.5 Wrong password shows "Wrong password" inline; modal stays open
 - [x] 2.6 Correct password triggers deletion; browser redirects to `/`
-- [ ] 2.7 Old credentials rejected after deletion
-- [ ] 2.8 No storage files remain for the deleted user (Supabase Studio)
-- [ ] 2.9 No auth user record remains for the deleted user (Supabase Studio)
+- [x] 2.7 Old credentials rejected after deletion
+- [x] 2.8 No storage files remain for the deleted user (Supabase Studio)
+- [x] 2.9 No auth user record remains for the deleted user (Supabase Studio)
 
 ### Phase 3: Tests and Verification
 
 #### Automated
 
-- [ ] 3.1 Forgot-password tests pass: `npm run test -- test/integration/forgot-password-route.test.ts`
-- [ ] 3.2 Reset-password tests pass: `npm run test -- test/integration/reset-password-route.test.ts`
-- [ ] 3.3 Delete-account tests pass: `npm run test -- test/integration/delete-account-route.test.ts`
-- [ ] 3.4 Full test suite passes: `npm run test`
-- [ ] 3.5 Type checking passes: `npm run typecheck`
-- [ ] 3.6 Linting passes: `npm run lint`
+- [x] 3.1 Forgot-password tests pass: `npm run test -- test/integration/forgot-password-route.test.ts`
+- [x] 3.2 Reset-password tests pass: `npm run test -- test/integration/reset-password-route.test.ts`
+- [x] 3.3 Delete-account tests pass: `npm run test -- test/integration/delete-account-route.test.ts`
+- [x] 3.4 Full test suite passes: `npm run test`
+- [x] 3.5 Type checking passes: `npm run typecheck`
+- [x] 3.6 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.7 Full password reset loop verified end-to-end
-- [ ] 3.8 Full deletion loop verified end-to-end
-- [ ] 3.9 Deletion cascade: no storage files, no DB rows, no auth user for deleted account (Supabase Studio)
-- [ ] 3.10 Sign-up and sign-in regressions: both flows work as before
+- [x] 3.7 Full password reset loop verified end-to-end
+- [x] 3.8 Full deletion loop verified end-to-end
+- [x] 3.9 Deletion cascade: no storage files, no DB rows, no auth user for deleted account (Supabase Studio)
+- [x] 3.10 Sign-up and sign-in regressions: both flows work as before
