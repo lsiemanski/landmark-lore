@@ -54,7 +54,7 @@ Add a nullable `request_id UUID UNIQUE` column to the `photos` table via a new m
 
 **Intent**: Add `request_id` to `photos` so the Worker can detect a duplicate submission for the same logical identify action and return the cached result rather than making a second paid AI call.
 
-**Contract**: Column is nullable (existing rows keep NULL), UUID type, with a unique constraint scoped to `(user_id, request_id)` — semantically correct since idempotency is per-user. A plain UNIQUE on `request_id` alone would also work (UUIDs are globally unique), but the composite constraint is more explicit. No RLS changes needed; the existing owner-all policy on `photos` already applies.
+**Contract**: Column is nullable (existing rows keep NULL), UUID type, with a **partial unique index** scoped to `(user_id, request_id) WHERE request_id IS NOT NULL` — semantically correct since idempotency is per-user, and the partial predicate indexes only rows that actually carry a `request_id`. A plain UNIQUE on `request_id` alone would also work (UUIDs are globally unique), but the composite index is more explicit. Note: this is a partial unique index rather than a table-level `UNIQUE` constraint; the two are equivalent for uniqueness enforcement here (Postgres treats NULLs as distinct either way), but a partial index cannot back an `INSERT ... ON CONFLICT (user_id, request_id)` unless the same `WHERE request_id IS NOT NULL` predicate is repeated — not a concern in S-01, where idempotency is a SELECT-before-INSERT (Phase 2 §4). No RLS changes needed; the existing owner-all policy on `photos` already applies.
 
 #### 2. TypeScript types
 
@@ -89,14 +89,14 @@ Extend the identify endpoint with persistence, idempotency, and upload handling.
 
 **New file layout:**
 
-| File                                                          | Responsibility                                                                                                                                                                                                                                                                                                                     | Est. lines |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `src/lib/api/http.ts`                                         | `HttpError`, `jsonResponse` — moved out of `identify.ts`; reusable by any API route                                                                                                                                                                                                                                                | ~20        |
-| `src/lib/identify/upload.ts`                                  | `parseUploadRequest`, `encodeForAI`                                                                                                                                                                                                                                                                                                | ~30        |
-| `src/lib/identify/quota.ts`                                   | `currentPeriod`, `consumeSlot`, `refundSlot` — moved from `identify.ts`                                                                                                                                                                                                                                                            | ~25        |
-| `src/lib/ai/identification.ts` _(exists — extracted by F-03)_ | Already holds `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and the `IdentificationResult` interface. S-01 edits it **in place** — no move, no new file: add an `isIdentificationResult` guard and change `identifyImage`'s return from `Promise<unknown>` → `Promise<IdentificationResult>`. | ~+15       |
-| `src/lib/identify/persistence.ts`                             | `checkIdempotencyCache`, `lookupDefaultFolder`, `uploadPhotoToStorage`, `persistPhotoAndIdentification`                                                                                                                                                                                                                            | ~85        |
-| `src/pages/api/identify.ts`                                   | `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, `POST` handler                                                                                                                                                                                                                                               | ~50        |
+| File                                                          | Responsibility                                                                                                                                                                                                                                                                                                                                                    | Est. lines |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `src/lib/api/http.ts`                                         | `HttpError` — moved out of `identify.ts`; reusable by any API route. (Reconciled 2026-06-14, impl-review F4: `jsonResponse` was **not** extracted — the handler uses native `Response.json()` instead.)                                                                                                                                                           | ~12        |
+| `src/lib/identify/upload.ts`                                  | `parseUploadRequest`, `encodeForAI`                                                                                                                                                                                                                                                                                                                               | ~30        |
+| `src/lib/identify/quota.ts`                                   | `currentPeriod`, `consumeSlot`, `refundSlot` — moved from `identify.ts`                                                                                                                                                                                                                                                                                           | ~25        |
+| `src/lib/ai/identification.ts` _(exists — extracted by F-03)_ | Already holds `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and the `IdentificationResult` interface. S-01 edits it **in place** — no move, no new file: add zod schema validation (`safeParse`) and change `identifyImage`'s return from `Promise<unknown>` → `Promise<IdentificationResult>` (see §0 reconciliation note). | ~+15       |
+| `src/lib/identify/persistence.ts`                             | `checkIdempotencyCache`, `lookupDefaultFolder`, `uploadPhotoToStorage`, `persistPhotoAndIdentification`                                                                                                                                                                                                                                                           | ~85        |
+| `src/pages/api/identify.ts`                                   | `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, `POST` handler                                                                                                                                                                                                                                                                              | ~50        |
 
 **Directory convention:** the AI module stays in `src/lib/ai/` (F-03's established home — see Phase 2 §0); the new request-glue modules (`upload.ts`, `quota.ts`, `persistence.ts`) live under a new `src/lib/identify/`. This is a deliberate split by concern — `src/lib/ai/` holds model/prompt/identification logic, `src/lib/identify/` holds the route's upload/persistence plumbing — chosen over relocating `identification.ts` (which would break the F-03 unit tests that import `@/lib/ai/identification`).
 
@@ -113,8 +113,8 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 **Contract**:
 
-- `src/lib/api/http.ts` — receives `HttpError` and `jsonResponse` (verbatim move, no logic change). Export both; update the import in `identify.ts`.
-- `src/lib/ai/identification.ts` — **already exists (F-03 extraction); edit in place, do not create a new file and do not move anything.** It already contains `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and exports the `IdentificationResult` interface (`{ recognised: boolean; subjectName: string; description: string }`, `identification.ts:20-24`). S-01's remaining work: (a) add a narrowing guard `isIdentificationResult(value: unknown): value is IdentificationResult`; (b) change `identifyImage`'s return from `Promise<unknown>` (`identification.ts:26`) to `Promise<IdentificationResult>` — after `JSON.parse`, run the guard and throw on failure so the handler's outer try/catch refunds the slot and returns 502. This closes the `npx astro check` gap (the handler and persistence read `result.recognised` / `result.subjectName` / `result.description` off a typed value) and guarantees the json_object fallback path — which is **not** schema-enforced — can never write malformed values into the NOT NULL `identifications` columns. Prefer a hand-rolled guard over a validation dependency to stay within the Workers 1 MB bundle limit (re-confirm via the Phase 2 `wrangler deploy --dry-run`, criterion 2.3). **Keep the module path `@/lib/ai/identification`** — `test/unit/identification.test.ts` (6 tests) imports from it; moving the file would break them.
+- `src/lib/api/http.ts` — receives `HttpError` (verbatim move, no logic change). Export it; update the import in `identify.ts`. (`jsonResponse` was not extracted — see the file-layout table note; the handler returns `Response.json(...)` directly.)
+- `src/lib/ai/identification.ts` — **already exists (F-03 extraction); edit in place, do not create a new file and do not move anything.** It already contains `identificationSchema`, `identifyImage`, `requestIdentification`, `visionMessages` and exports the `IdentificationResult` interface (`{ recognised: boolean; subjectName: string; description: string }`, `identification.ts:20-24`). S-01's remaining work: (a) validate the parsed response and narrow it to `IdentificationResult`; (b) change `identifyImage`'s return from `Promise<unknown>` (`identification.ts:26`) to `Promise<IdentificationResult>` — after `JSON.parse`, validate and throw on failure so the handler's outer try/catch refunds the slot and returns 502. This closes the `npx astro check` gap (the handler and persistence read `result.recognised` / `result.subjectName` / `result.description` off a typed value) and guarantees the json_object fallback path — which is **not** schema-enforced — can never write malformed values into the NOT NULL `identifications` columns. **Reconciled (2026-06-14, impl-review F2):** the original plan called for a hand-rolled `isIdentificationResult` guard to avoid a validation dependency for bundle reasons — but `zod` is already a transitive dependency (`^4.3.6` in `package-lock.json` via `openai`/`astro`), so using it directly adds **zero** bundle weight. The implementation defines `IdentificationResultSchema = z.object({...})`, validates via `IdentificationResultSchema.safeParse(...)` (throwing `"Malformed AI response"` on failure), derives `IdentificationResult` via `z.infer`, and replaces the prior hand-written JSON-schema literal with `z.toJSONSchema(...)`. Bundle budget re-confirmed via the Phase 2 `wrangler deploy --dry-run` (criterion 2.3). **Keep the module path `@/lib/ai/identification`** — `test/unit/identification.test.ts` (6 tests) imports from it; moving the file would break them.
 - `src/lib/identify/quota.ts` — receives `currentPeriod`, `consumeSlot`, `refundSlot` (verbatim move). Export all three.
 - `src/pages/api/identify.ts` — retains only `requireApiKey`, `requireSupabaseClient`, `requireAuthenticatedUser`, and the `POST` handler; imports everything else from the new modules.
 
@@ -126,13 +126,16 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 **Contract**: Returns `{ photo: File; requestId: string }`. Throws `HttpError(400, { error: 'Missing request_id' })` if `request_id` is absent or not a valid UUID v4. **Preserves the existing upload validation from `readImageAsBase64` (identify.ts:69-80):** throws `HttpError(415, { error: 'Unsupported media type' })` if the `photo` field is not a `File` or its `type` is not in `IDENTIFY_CONFIG.allowedTypes`, and `HttpError(413, { error: 'File too large' })` if `photo.size > IDENTIFY_CONFIG.maxBytes`. These checks back success criterion 2.7 (invalid MIME → 415).
 
-#### 2. `encodeForAI` — encode image for the AI call
+#### 2. `encodeForAI` and `hashPhoto` — encode image for the AI call and compute content hash
 
 **File**: `src/lib/identify/upload.ts`
 
-**Intent**: Encodes the photo as a base64 string for the OpenRouter/Gemini API call. Isolated from request parsing and storage upload so the encoding concern can change independently.
+**Intent**: Two separate pure functions over the same `File`, kept together because both operate on raw bytes before any I/O.
 
-**Contract**: Accepts `photo: File`. Returns `Promise<string>` (base64-encoded image data). No side effects.
+- `encodeForAI` — encodes the photo as a base64 string for the OpenRouter/Gemini API call.
+- `hashPhoto` — computes a SHA-256 hex digest of the photo bytes via `crypto.subtle.digest("SHA-256", ...)`. Used by the handler immediately after parsing to enable content-based idempotency validation (§4).
+
+**Contract**: Both accept `photo: File` and return `Promise<string>`. No side effects. `crypto.subtle` is available on Cloudflare Workers and Node 18+.
 
 #### 3. `requireAuthenticatedUser` — capture return value
 
@@ -146,9 +149,9 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 **File**: `src/lib/identify/persistence.ts`
 
-**Intent**: Before consuming a quota slot, check whether a `photos` row with this `(user_id, request_id)` pair already exists. If it does (in S-01 such a row always has `status='identified'` with an `identifications` row), return the cached result immediately without calling the AI.
+**Intent**: Before consuming a quota slot, check whether a `photos` row with this `(user_id, request_id)` pair already exists. If it does (in S-01 such a row always has `status='identified'` with an `identifications` row), return the cached result immediately without calling the AI. Also returns the stored `photo_hash` so the handler can detect `request_id` reuse with a different photo (which indicates a client bug) and return 409 instead of silently serving the wrong cached result.
 
-**Contract**: Query `photos` WHERE `user_id = userId AND request_id = requestId`, left-join `identifications`. Returns `null` (no cache hit) or `{ photoId: string; result: IdentificationResult }`. Since unrecognized photos are never saved and persistence only ever writes `status='identified'`, a cache hit guarantees an `identifications` row exists. The handler returns `jsonResponse({ result, photoId })` immediately on a hit. (No `status='error'` handling is needed in S-01 — no code path writes that status; it would only become relevant if a future slice introduces a partial-write/error state.)
+**Contract**: Query `photos` WHERE `user_id = userId AND request_id = requestId`, left-join `identifications`, selecting `id, photo_hash, identifications(subject_name, description)`. Returns `null` (no cache hit) or `{ photoId: string; photoHash: string | null; result: IdentificationResult }`. Since unrecognized photos are never saved and persistence only ever writes `status='identified'`, a cache hit guarantees an `identifications` row exists. The handler compares `cached.photoHash !== photoHash` (where `photoHash` is a SHA-256 hex digest of the incoming photo bytes, computed via `crypto.subtle.digest`) and throws `HttpError(409, { error: 'request_id already used with a different photo' })` on mismatch. On hash match (true retry), the handler returns `jsonResponse({ result, photoId })` immediately. (No `status='error'` handling is needed in S-01 — no code path writes that status; it would only become relevant if a future slice introduces a partial-write/error state.)
 
 #### 5. `lookupDefaultFolder` — new helper
 
@@ -172,7 +175,7 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 
 **Intent**: Called only when `recognised: true`. Performs the three writes that make an identification permanent: Storage upload of the 2048px client-downscaled image, `photos` INSERT (final status `'identified'` — no `'pending'` intermediate), and `identifications` INSERT. Placing all three writes here keeps the happy path atomic from the handler's perspective.
 
-**Contract**: Accepts four typed parameters — `supabase` (infrastructure), `user` (auth context), `upload: { photoId: string; requestId: string; photo: File; folderId: string }` (what is being saved), and `result: IdentificationResult` (AI output). Grouping by concern means the caller passes coherent objects rather than a flat bag of seven unrelated values. Reads `upload.photo.type` for MIME type, `upload.photo.name` for original filename, and `upload.photo.arrayBuffer()` for raw bytes — consumed internally. Sequence: (1) `uploadPhotoToStorage` — upload raw bytes to `photos/{userId}/{photoId}.{ext}`; throws `HttpError(500)` on storage error. (2) INSERT into `photos` with `status='identified'`, `request_id`, and all required fields; throws `HttpError(500)` on error. (3) INSERT into `identifications` with `photo_id`, `subject_name = result.subjectName`, `description = result.description`; throws `HttpError(500)` on error. A Storage upload that succeeds but whose DB insert fails leaves an orphan object — this is the accepted MVP atomicity risk; document but do not handle in S-01.
+**Contract**: Accepts four typed parameters — `supabase` (infrastructure), `user` (auth context), `upload: { photoId: string; requestId: string; photo: File; folderId: string; photoHash: string }` (what is being saved), and `result: IdentificationResult` (AI output). Grouping by concern means the caller passes coherent objects rather than a flat bag of seven unrelated values. Reads `upload.photo.type` for MIME type, `upload.photo.name` for original filename, and `upload.photo.arrayBuffer()` for raw bytes — consumed internally. Sequence: (1) `uploadPhotoToStorage` — upload raw bytes to `photos/{userId}/{photoId}.{ext}`; throws `HttpError(500)` on storage error. (2) INSERT into `photos` with `status='identified'`, `request_id`, `photo_hash`, and all required fields; throws `HttpError(500)` on error. (3) INSERT into `identifications` with `photo_id`, `subject_name = result.subjectName`, `description = result.description`; throws `HttpError(500)` on error. A Storage upload that succeeds but whose DB insert fails leaves an orphan object — this is the accepted MVP atomicity risk; document but do not handle in S-01. **Caveat (2026-06-14, impl-review F3):** the three writes are also non-atomic _relative to each other_. If the `photos` INSERT succeeds but the `identifications` INSERT fails, a `photos` row exists for that `(user_id, request_id)` with no `identifications` child. On retry, `checkIdempotencyCache` sees `identifications = null`, treats it as a cache miss, and the fresh persist reuses the same `request_id` → partial-unique-index violation → 500. That `request_id` is then permanently stuck (the user must start a new identify action to get a fresh key). This contradicts §4's "a cache hit guarantees an `identifications` row exists" in the half-written case. Accepted for S-01 (DB insert rarely half-fails); the half-written `photos` row is a cleanup target for S-03/GDPR work.
 
 #### 8. Handler orchestration update
 
@@ -186,16 +189,17 @@ The response extends from `{ result }` to `{ result, photoId? }`.
 2. `requireSupabaseClient()`
 3. `const user = requireAuthenticatedUser(supabase)`
 4. `const { photo, requestId } = await parseUploadRequest(request)`
-5. `const cached = await checkIdempotencyCache(supabase, user.id, requestId)` — return `jsonResponse({ result, photoId })` immediately if hit
-6. `const period = currentPeriod()`
-7. `consumeSlot(supabase, period)`
-8. `const base64 = await encodeForAI(photo)`
-9. `const result = await identifyImage(base64, apiKey)` — in outer try/catch; on AI exception: `refundSlot(supabase, period)` + throw 502
-10. If `!result.recognised` → return `jsonResponse({ result })` (no photoId; nothing persisted)
-11. `const photoId = crypto.randomUUID()`
-12. `const folderId = await lookupDefaultFolder(supabase, user.id)`
-13. `await persistPhotoAndIdentification(supabase, user, { photoId, requestId, photo, folderId }, result)` — on failure: `refundSlot(supabase, period)` + throw 500
-14. Return `jsonResponse({ result, photoId })`
+5. `const photoHash = await hashPhoto(photo)` — SHA-256 hex digest; computed once here, used in steps 6 and 13
+6. `const cached = await checkIdempotencyCache(supabase, user.id, requestId)` — if hit and `cached.photoHash !== photoHash`: throw 409; else return `jsonResponse({ result, photoId })` immediately
+7. `const period = currentPeriod()`
+8. `consumeSlot(supabase, period)`
+9. `const base64 = await encodeForAI(photo)`
+10. `const result = await identifyImage(base64, apiKey)` — in inner try/catch; on AI exception: `refundSlot(supabase, period)` + throw 502
+11. If `!result.recognised` → return `jsonResponse({ result })` (no photoId; nothing persisted)
+12. `const photoId = crypto.randomUUID()`
+13. `const folderId = await lookupDefaultFolder(supabase, user.id)`
+14. `await persistPhotoAndIdentification(supabase, user, { photoId, requestId, photo, folderId, photoHash }, result)` — on failure: `refundSlot(supabase, period)` + throw 500
+15. Return `jsonResponse({ result, photoId })`
 
 Response type: `{ result: IdentificationResult; photoId?: string }` — `photoId` is present only when the photo was saved (i.e., `recognised: true`). The client uses the presence of `photoId` to determine whether to show the "Saved" confirmation.
 
@@ -346,7 +350,9 @@ Adding Storage upload (~I/O wait, zero CPU) + two DB writes (~2-4ms CPU) + one D
 
 ## Migration Notes
 
-The `request_id` column is nullable, so the migration applies to existing rows without a default value. Any pre-existing `photos` rows (none in production at time of writing) will have `request_id = NULL`, which is valid — the UNIQUE constraint excludes NULLs.
+The `request_id` column is nullable, so the migration applies to existing rows without a default value. Any pre-existing `photos` rows (none in production at time of writing) will have `request_id = NULL`, which is valid — the partial unique index excludes NULL `request_id` rows via its `WHERE request_id IS NOT NULL` predicate.
+
+**Addendum (2026-06-14, impl-review F1):** `photo_hash` was **not** present in the base schema (`20260603000001_create_folders_photos_identifications.sql`); Phase 1 added only `request_id`. The plan's Phase 2 §4/§7 referenced `photos.photo_hash` as if it existed — this was a plan gap. Phase 2 closed it with two new migrations: `20260614000001_add_photo_hash_to_photos.sql` (add nullable `TEXT`) and `20260614000002_photo_hash_not_null.sql` (backfill-by-deletion of hash-less rows, then `SET NOT NULL`). The second migration's `DELETE FROM identifications`/`DELETE FROM photos WHERE photo_hash IS NULL` is **destructive**: harmless against an empty `photos` table (a no-op), but silent data loss against a populated one. **Pre-deploy check:** confirm the production `photos` table has no rows before this migration ships (expected — F-02 persisted nothing). The delete only targets rows predating the `photo_hash` column, which in production should be none.
 
 ## References
 
@@ -368,33 +374,34 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `supabase db reset`
-- [x] 1.2 TypeScript compiles: `npx astro check`
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `supabase db reset` — 1f9f4fd
+- [x] 1.2 TypeScript compiles: `npx astro check` — 1f9f4fd
+- [x] 1.3 Lint passes: `npm run lint` — 1f9f4fd
 
 #### Manual
 
-- [x] 1.4 `supabase db diff` shows no unexpected drift after reset
-- [x] 1.5 `photos` table in Supabase Studio shows `request_id` column as nullable UUID
+- [x] 1.4 `supabase db diff` shows no unexpected drift after reset — 1f9f4fd
+- [x] 1.5 `photos` table in Supabase Studio shows `request_id` column as nullable UUID — 1f9f4fd
 
 ### Phase 2: Backend — persistence + idempotency
 
 #### Automated
 
-- [ ] 2.1 TypeScript compiles: `npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
-- [ ] 2.10 Full test suite passes (incl. updated route test): `npm test`
+- [x] 2.1 TypeScript compiles: `npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
+- [x] 2.10 Full test suite passes (incl. updated route test): `npm test`
 
 #### Manual
 
-- [ ] 2.4 POST with valid photo + fresh `request_id` returns `{ result, photoId }` and creates DB rows
-- [ ] 2.5 Second POST with same `request_id` returns cached result, no duplicate `photos` row
-- [ ] 2.6 POST without session returns 401 before quota consumed
-- [ ] 2.7 POST with invalid MIME type returns 415
-- [ ] 2.8 POST after cap exhausted returns 429 with `{ error, limit, used }`
-- [ ] 2.9 Unrecognised photo: API returns `{ result }` with no `photoId`; no `photos` row or `identifications` row created; quota slot consumed (no refund)
-- [ ] 2.11 `ci.yml` `ci` job runs `npm test`, gating `deploy`/`preview` (`needs: ci`)
+- [x] 2.4 POST with valid photo + fresh `request_id` returns `{ result, photoId }` and creates DB rows
+- [x] 2.5 Second POST with same `request_id` returns cached result, no duplicate `photos` row
+- [x] 2.5b Same `request_id` + different photo returns 409 (hash mismatch)
+- [x] 2.6 POST without session returns 401 before quota consumed
+- [x] 2.7 POST with invalid MIME type returns 415
+- [x] 2.8 POST after cap exhausted returns 429 with `{ error, limit, used }`
+- [x] 2.9 Unrecognised photo: API returns `{ result }` with no `photoId`; no `photos` row or `identifications` row created; quota slot consumed (no refund)
+- [x] 2.11 `ci.yml` `ci` job runs `npm test`, gating `deploy`/`preview` (`needs: ci`)
 
 ### Phase 3: Production UI
 

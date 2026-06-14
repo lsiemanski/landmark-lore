@@ -47,6 +47,11 @@ describe("Risk #4 — provider error handling", () => {
     await expect(identifyImage("base64data", "test-api-key")).rejects.toThrow();
   });
 
+  it("rejects with 'Malformed AI response' for valid JSON missing required fields", async () => {
+    server.use(http.post(OPENROUTER_URL, () => HttpResponse.json(makeCompletionResponse('{"foo":"bar"}'))));
+    await expect(identifyImage("base64data", "test-api-key")).rejects.toThrow("Malformed AI response");
+  });
+
   it("rejects with OpenAI.APIError for a non-400 HTTP error", async () => {
     server.use(
       http.post(

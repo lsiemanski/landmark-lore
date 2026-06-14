@@ -1,0 +1,2 @@
+ALTER TABLE photos
+  ADD COLUMN IF NOT EXISTS photo_hash TEXT;

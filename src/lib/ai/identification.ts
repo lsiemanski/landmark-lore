@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { z } from "zod";
 import { IDENTIFY_CONFIG } from "@/lib/ai/config";
 import prompts from "@/lib/ai/identify-prompts.yaml";
 
@@ -6,30 +7,25 @@ const SYSTEM_PROMPT = prompts.systemPrompt.trim();
 const JSON_SHAPE_HINT = " " + prompts.jsonShapeHint.trim();
 const USER_PROMPT = prompts.userPrompt.trim();
 
-const identificationSchema = {
-  type: "object",
-  properties: {
-    recognised: { type: "boolean" },
-    subjectName: { type: "string" },
-    description: { type: "string" },
-  },
-  required: ["recognised", "subjectName", "description"],
-  additionalProperties: false,
-};
+const IdentificationResultSchema = z.object({
+  recognised: z.boolean(),
+  subjectName: z.string(),
+  description: z.string(),
+});
 
-export interface IdentificationResult {
-  recognised: boolean;
-  subjectName: string;
-  description: string;
-}
+const identificationSchema = z.toJSONSchema(IdentificationResultSchema);
 
-export async function identifyImage(base64: string, apiKey: string): Promise<unknown> {
+export type IdentificationResult = z.infer<typeof IdentificationResultSchema>;
+
+export async function identifyImage(base64: string, apiKey: string): Promise<IdentificationResult> {
   const client = new OpenAI({ apiKey, baseURL: IDENTIFY_CONFIG.openrouterBaseUrl });
   const response = await requestIdentification(client, base64);
 
   const content = response.choices[0].message.content;
   if (!content) throw new Error("Empty response from AI provider");
-  return JSON.parse(content);
+  const parsed = IdentificationResultSchema.safeParse(JSON.parse(content));
+  if (!parsed.success) throw new Error("Malformed AI response");
+  return parsed.data;
 }
 
 async function requestIdentification(client: OpenAI, base64: string): Promise<OpenAI.Chat.ChatCompletion> {

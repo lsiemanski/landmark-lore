@@ -1,0 +1,107 @@
+import { type SupabaseClient } from "@/lib/supabase";
+import type { IdentificationResult } from "@/lib/ai/identification";
+import { HttpError } from "@/lib/api/http";
+
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/** A prior identification recovered from the idempotency cache. */
+export interface CachedIdentification {
+  photoId: string;
+  photoHash: string;
+  result: IdentificationResult;
+}
+
+/** Everything the handler has assembled to persist one recognised photo. */
+export interface PhotoUploadCommand {
+  photoId: string;
+  requestId: string;
+  photo: File;
+  folderId: string;
+  photoHash: string;
+}
+
+export async function checkIdempotencyCache(
+  supabase: SupabaseClient,
+  userId: string,
+  requestId: string,
+): Promise<CachedIdentification | null> {
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id, photo_hash, identifications(subject_name, description)")
+    .eq("user_id", userId)
+    .eq("request_id", requestId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const id = data.identifications;
+  if (!id) return null;
+
+  return {
+    photoId: data.id,
+    photoHash: data.photo_hash,
+    result: { recognised: true, subjectName: id.subject_name, description: id.description },
+  };
+}
+
+export async function lookupDefaultFolder(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("folders")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("name", "Uncategorized")
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) throw new HttpError(500, { error: "Default folder not found" });
+  return data.id;
+}
+
+async function uploadPhotoToStorage(
+  supabase: SupabaseClient,
+  userId: string,
+  photoId: string,
+  photo: File,
+): Promise<string> {
+  const ext = MIME_TO_EXT[photo.type] ?? "jpg";
+  const storagePath = `${userId}/${photoId}.${ext}`;
+  const arrayBuffer = await photo.arrayBuffer();
+  const { error } = await supabase.storage.from("photos").upload(storagePath, arrayBuffer, { contentType: photo.type });
+  if (error) throw new HttpError(502, { error: "Storage upload failed" });
+  return storagePath;
+}
+
+export async function persistPhotoAndIdentification(
+  supabase: SupabaseClient,
+  user: { id: string },
+  upload: PhotoUploadCommand,
+  result: IdentificationResult,
+): Promise<void> {
+  // Storage upload that succeeds before a DB failure leaves an orphan object — accepted MVP risk.
+  const storagePath = await uploadPhotoToStorage(supabase, user.id, upload.photoId, upload.photo);
+
+  const { error: photoError } = await supabase.from("photos").insert({
+    id: upload.photoId,
+    user_id: user.id,
+    folder_id: upload.folderId,
+    storage_path: storagePath,
+    mime_type: upload.photo.type,
+    original_filename: upload.photo.name,
+    file_size: upload.photo.size,
+    photo_hash: upload.photoHash,
+    request_id: upload.requestId,
+    status: "identified" as const,
+  });
+  if (photoError) throw new HttpError(500, { error: "Failed to save photo" });
+
+  const { error: idError } = await supabase.from("identifications").insert({
+    photo_id: upload.photoId,
+    subject_name: result.subjectName,
+    description: result.description,
+  });
+  if (idError) throw new HttpError(500, { error: "Failed to save identification" });
+}

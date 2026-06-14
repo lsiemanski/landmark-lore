@@ -1,34 +1,76 @@
 import type { APIContext, APIRoute } from "astro";
 import { OPENROUTER_API_KEY } from "astro:env/server";
-import { createClient } from "@/lib/supabase";
-import { IDENTIFY_CONFIG } from "@/lib/ai/config";
+import { createClient, type SupabaseClient } from "@/lib/supabase";
 import { identifyImage } from "@/lib/ai/identification";
-
-type Supabase = NonNullable<ReturnType<typeof createClient>>;
+import { HttpError } from "@/lib/api/http";
+import { currentPeriod, consumeSlot, refundSlot } from "@/lib/identify/quota";
+import { parseUploadRequest, encodeForAI, hashPhoto } from "@/lib/identify/upload";
+import { checkIdempotencyCache, lookupDefaultFolder, persistPhotoAndIdentification } from "@/lib/identify/persistence";
 
 export const POST: APIRoute = async (context) => {
   try {
     const apiKey = requireApiKey();
     const supabase = requireSupabaseClient(context);
-    await requireAuthenticatedUser(supabase);
+    const user = await requireAuthenticatedUser(supabase);
 
-    const base64 = await readImageAsBase64(context.request);
-    const period = currentPeriod();
-    await consumeSlot(supabase, period);
+    const { photo, requestId } = await parseUploadRequest(context.request);
+    const photoHash = await hashPhoto(photo);
 
-    try {
-      const result = await identifyImage(base64, apiKey);
-      return jsonResponse({ result });
-    } catch {
-      // The identification did not complete — refund the reserved slot so it does not count.
-      await refundSlot(supabase, period);
-      throw new HttpError(502, { error: "AI provider error" });
-    }
+    const cached = await resolveIdempotency(supabase, user.id, requestId, photoHash);
+    if (cached) return cached;
+
+    return await identify(supabase, user, { photo, requestId, photoHash, apiKey });
   } catch (err) {
     if (err instanceof HttpError) return err.toResponse();
     throw err;
   }
 };
+
+// --- Orchestration steps ------------------------------------------------------
+
+async function resolveIdempotency(
+  supabase: SupabaseClient,
+  userId: string,
+  requestId: string,
+  photoHash: string,
+): Promise<Response | null> {
+  const cached = await checkIdempotencyCache(supabase, userId, requestId);
+  if (!cached) return null;
+  if (cached.photoHash !== photoHash) {
+    throw new HttpError(409, { error: "request_id already used with a different photo" });
+  }
+  return Response.json({ result: cached.result, photoId: cached.photoId });
+}
+
+async function identify(
+  supabase: SupabaseClient,
+  user: { id: string },
+  params: { photo: File; requestId: string; photoHash: string; apiKey: string },
+): Promise<Response> {
+  const period = currentPeriod();
+  await consumeSlot(supabase, period);
+
+  try {
+    const base64 = await encodeForAI(params.photo);
+    const result = await identifyImage(base64, params.apiKey);
+
+    if (!result.recognised) return Response.json({ result });
+
+    const photoId = crypto.randomUUID();
+    const folderId = await lookupDefaultFolder(supabase, user.id);
+    await persistPhotoAndIdentification(
+      supabase,
+      user,
+      { photoId, requestId: params.requestId, photo: params.photo, folderId, photoHash: params.photoHash },
+      result,
+    );
+    return Response.json({ result, photoId });
+  } catch (err) {
+    await refundSlot(supabase, period);
+    if (err instanceof HttpError) throw err;
+    throw new HttpError(502, { error: "AI provider error" });
+  }
+}
 
 // --- Request pipeline ---------------------------------------------------------
 
@@ -37,77 +79,16 @@ function requireApiKey(): string {
   return OPENROUTER_API_KEY;
 }
 
-function requireSupabaseClient(context: APIContext): Supabase {
+function requireSupabaseClient(context: APIContext): SupabaseClient {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) throw new HttpError(503, { error: "Supabase not configured" });
   return supabase;
 }
 
-async function requireAuthenticatedUser(supabase: Supabase) {
+async function requireAuthenticatedUser(supabase: SupabaseClient) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new HttpError(401, { error: "Unauthorised" });
   return user;
-}
-
-async function readImageAsBase64(request: Request): Promise<string> {
-  const form = await request.formData();
-  const file = form.get("photo");
-  if (!(file instanceof File)) throw new HttpError(415, { error: "Unsupported media type" });
-  if (!IDENTIFY_CONFIG.allowedTypes.includes(file.type)) {
-    throw new HttpError(415, { error: "Unsupported media type" });
-  }
-  if (file.size > IDENTIFY_CONFIG.maxBytes) throw new HttpError(413, { error: "File too large" });
-
-  const buffer = await file.arrayBuffer();
-  return Buffer.from(buffer).toString("base64");
-}
-
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-// --- Rate limiting ------------------------------------------------------------
-
-async function consumeSlot(supabase: Supabase, period: string): Promise<void> {
-  const { data: consumed, error } = await supabase.rpc("try_consume_image_usage", {
-    p_period: period,
-    p_limit: IDENTIFY_CONFIG.dailyImageLimit,
-  });
-  if (error) throw new HttpError(503, { error: "Usage check failed" });
-  if (!consumed.allowed) {
-    throw new HttpError(429, {
-      error: "Daily limit reached",
-      limit: IDENTIFY_CONFIG.dailyImageLimit,
-      used: consumed.used,
-    });
-  }
-}
-
-async function refundSlot(supabase: Supabase, period: string): Promise<void> {
-  // Best-effort: a failed refund only costs the user one slot.
-  await supabase.rpc("refund_image_usage", { p_period: period });
-}
-
-// --- HTTP helpers -------------------------------------------------------------
-
-class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly body: Record<string, unknown>,
-  ) {
-    super(typeof body.error === "string" ? body.error : `HTTP ${status}`);
-  }
-
-  toResponse(): Response {
-    return jsonResponse(this.body, this.status);
-  }
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
 }
