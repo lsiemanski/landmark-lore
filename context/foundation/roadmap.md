@@ -3,7 +3,7 @@ project: Landmark Lore
 version: 1
 status: draft
 created: 2026-06-01
-updated: 2026-06-12
+updated: 2026-06-14
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -27,25 +27,25 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 
 ## At a glance
 
-| ID   | Change ID                    | Outcome (user can …)                                                              | Prerequisites  | PRD refs                      | Status   |
-|------|------------------------------|-----------------------------------------------------------------------------------|----------------|-------------------------------|----------|
-| F-01 | data-schema                  | (foundation) photos, folders, and identifications tables exist in Supabase        | —              | FR-003, FR-006, FR-007        | done     |
-| F-02 | ai-provider-spike            | (foundation) AI provider chosen, key configured, test identification call verified | —             | FR-004, FR-005                | done     |
-| F-03 | testing-harness-bootstrap    | (foundation) Vitest runner configured; identification-contract integration tests pass | —           | —                             | done     |
-| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it               | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | planned |
-| S-02 | follow-up-questions          | ask follow-up questions about an identified photo and receive answers              | S-01           | FR-005                        | proposed |
-| S-03 | archive-and-folders          | view their archive and manually move photos between folders                        | S-01           | FR-007                        | proposed |
-| S-04 | account-lifecycle            | create an account, sign in, and reset their password via email                    | —              | FR-001, FR-002, FR-010        | ready    |
+| ID   | Change ID                     | Outcome (user can …)                                                                  | Prerequisites    | PRD refs                      | Status |
+| ---- | ----------------------------- | ------------------------------------------------------------------------------------- | ---------------- | ----------------------------- | ------ |
+| F-01 | data-schema                   | (foundation) photos, folders, and identifications tables exist in Supabase            | —                | FR-003, FR-006, FR-007        | done   |
+| F-02 | ai-provider-spike             | (foundation) AI provider chosen, key configured, test identification call verified    | —                | FR-004, FR-005                | done   |
+| F-03 | testing-harness-bootstrap     | (foundation) Vitest runner configured; identification-contract integration tests pass | —                | —                             | done   |
+| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done   |
+| S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | ready  |
+| S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | ready  |
+| S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | ready  |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                  | Chain                                        | Note                                                                                         |
-|--------|------------------------|----------------------------------------------|----------------------------------------------------------------------------------------------|
+| Stream | Theme                  | Chain                                      | Note                                                                                                                                    |
+| ------ | ---------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | A      | Identification core    | `F-01` / `F-02` → `F-03` → `S-01` → `S-02` | Critical path for `main_goal: speed`; F-01, F-02, and F-03 can run in parallel once F-01/F-02 are done (F-03 has no schema dependency). |
-| B      | Archive & organisation | `S-01` → `S-03`                              | Branches from Stream A at `S-01`; parallel with `S-02` once `S-01` lands.                   |
-| C      | Auth completion        | `S-04`                                       | Standalone; no dependency on other slices; parallel with entire Stream A.                    |
+| B      | Archive & organisation | `S-01` → `S-03`                            | Branches from Stream A at `S-01`; parallel with `S-02` once `S-01` lands.                                                               |
+| C      | Auth completion        | `S-04`                                     | Standalone; no dependency on other slices; parallel with entire Stream A.                                                               |
 
 ## Baseline
 
@@ -113,7 +113,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Progress feedback mechanism: the NFR requires "continuous visible progress feedback" during AI analysis — streaming vs. polling during the provider API call. Owner: user. Block: no (either approach satisfies the NFR; decide during planning).
 - **Risk:** The highest-risk slice — new AI integration, photo upload to Supabase Storage, and identification result persistence all land here for the first time; Workers CPU time limit (10 ms free tier, infrastructure.md) may require profiling before public launch.
-- **Status:** planned
+- **Status:** done
 
 ### S-02: Follow-up questions
 
@@ -123,10 +123,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** S-01
 - **Parallel with:** S-03
 - **Blockers:** —
-- **Unknowns:**
-  - Stateful vs. stateless follow-up context (PRD Open Question 3): stateful retains identification context between questions and produces richer answers; stateless treats each question independently and is simpler to build. Owner: user. Block: no for v1 if stateless is acceptable.
-- **Risk:** Stateless implementation ships fastest but reduces answer quality when follow-ups reference earlier context in the session; this is the primary scope decision for this slice.
-- **Status:** proposed
+- **Unknowns:** —
+- **Decisions made:** In-browser only (React state, not DB); same screen as the identification result; works for both identified and unrecognized photos; stateless per-question calls (no session context retained). Resolved 2026-06-11.
+- **Risk:** Stateless implementation ships fastest but reduces answer quality when follow-ups reference earlier context in the session; acceptable for v1.
+- **Status:** ready
 
 ### S-03: Archive view and folder management
 
@@ -138,7 +138,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Folder move logic depends on the schema designed in F-01; if the folders table does not model the structure needed for FR-007, a schema migration is required before this slice can ship.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-04: Account lifecycle complete
 
@@ -154,15 +154,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                    | Suggested issue title                                              | Ready for `/10x-plan` | Notes                                                                          |
-|------------|------------------------------|--------------------------------------------------------------------|-----------------------|--------------------------------------------------------------------------------|
-| F-01       | data-schema                  | Design and apply Supabase schema for photos, folders, identifications | done               | Complete                                                                       |
-| F-02       | ai-provider-spike            | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | done | Complete — unlocks S-01, S-02                                   |
-| F-03       | testing-harness-bootstrap    | Set up Vitest + identification-contract integration tests          | yes                   | Run `/10x-new testing-harness-bootstrap` → `/10x-research` → `/10x-plan`      |
-| S-01       | first-identification-and-save | Build upload → identify → save core flow                          | blocked               | F-01 and F-02 done; plan reviewed; blocked on F-03 for integration test coverage |
-| S-02       | follow-up-questions          | Add follow-up questions to the identification session              | no                    | Needs S-01                                                                     |
-| S-03       | archive-and-folders          | Build archive view and manual folder management                    | no                    | Needs S-01                                                                     |
-| S-04       | account-lifecycle            | Add password reset; verify full auth flow end-to-end               | yes                   | Run `/10x-plan account-lifecycle`                                              |
+| Roadmap ID | Change ID                     | Suggested issue title                                                                  | Ready for `/10x-plan` | Notes                                                                    |
+| ---------- | ----------------------------- | -------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------ |
+| F-01       | data-schema                   | Design and apply Supabase schema for photos, folders, identifications                  | done                  | Complete                                                                 |
+| F-02       | ai-provider-spike             | Configure OpenRouter API key (Gemini 2.5 Flash), verify identification call end-to-end | done                  | Complete — unlocks S-01, S-02                                            |
+| F-03       | testing-harness-bootstrap     | Set up Vitest + identification-contract integration tests                              | yes                   | Run `/10x-new testing-harness-bootstrap` → `/10x-research` → `/10x-plan` |
+| S-01       | first-identification-and-save | Build upload → identify → save core flow                                               | done                  | Complete                                                                 |
+| S-02       | follow-up-questions           | Add follow-up questions to the identification session                                  | yes                   | Run `/10x-new follow-up-questions` → `/10x-plan`                         |
+| S-03       | archive-and-folders           | Build archive view and manual folder management                                        | yes                   | Run `/10x-new archive-and-folders` → `/10x-plan`                         |
+| S-04       | account-lifecycle             | Add password reset; verify full auth flow end-to-end                                   | yes                   | Run `/10x-plan account-lifecycle`                                        |
 
 ## Open Roadmap Questions
 
@@ -188,3 +188,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-01: (foundation) photos, folders, and identifications tables exist in Supabase** — Archived 2026-06-12 → `context/archive/2026-06-03-data-schema/`. Lesson: —.
 - **F-02: (foundation) AI provider chosen, key configured, test identification call verified** — Archived 2026-06-12 → `context/archive/2026-06-05-ai-provider-spike/`. Lesson: —.
 - **F-03: (foundation) Vitest runner configured; identification-contract integration tests pass** — Archived 2026-06-12 → `context/archive/2026-06-12-testing-harness-bootstrap/`. Lesson: —.
+- **S-01: upload a photo, receive identification, and save it to the archive** — Implemented 2026-06-14. Change ID: `first-identification-and-save`. Unlocks S-02, S-03.
