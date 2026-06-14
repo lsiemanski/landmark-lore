@@ -13,12 +13,16 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss(), yaml()],
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
   },
   adapter: cloudflare(),
   env: {
     schema: {
       SUPABASE_URL: envField.string({ context: "server", access: "secret", optional: true }),
       SUPABASE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
       OPENROUTER_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
       // Runtime-tunable identify config (access: "secret" = read at runtime, not
       // bundled — change in the Cloudflare dashboard without a rebuild). Optional;

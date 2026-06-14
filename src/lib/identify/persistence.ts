@@ -1,6 +1,7 @@
 import { type SupabaseClient } from "@/lib/supabase";
 import type { IdentificationResult } from "@/lib/ai/identification";
 import { HttpError } from "@/lib/api/http";
+import { PHOTOS_BUCKET } from "@/lib/identify/storage";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -70,7 +71,9 @@ async function uploadPhotoToStorage(
   const ext = MIME_TO_EXT[photo.type] ?? "jpg";
   const storagePath = `${userId}/${photoId}.${ext}`;
   const arrayBuffer = await photo.arrayBuffer();
-  const { error } = await supabase.storage.from("photos").upload(storagePath, arrayBuffer, { contentType: photo.type });
+  const { error } = await supabase.storage
+    .from(PHOTOS_BUCKET)
+    .upload(storagePath, arrayBuffer, { contentType: photo.type });
   if (error) throw new HttpError(502, { error: "Storage upload failed" });
   return storagePath;
 }

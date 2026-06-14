@@ -334,6 +334,11 @@ Extraction helpers (following `identify.ts` style):
 
 **Implementation Note:** After completing this phase and all automated verification passes, pause here for manual confirmation before proceeding to Phase 3.
 
+### Addendum (discovered during implementation)
+
+- **§5/§6 — `DeleteAccountModal.tsx` + dashboard link became `AccountMenu.tsx`.** Instead of a standalone modal component and a separate "Delete account" link, the dashboard header now renders a single `AccountMenu` dropdown (email → Sign out / Delete account), with the confirmation modal inlined as a private `DeleteModal` in the same file (181 lines, under the 250 limit). The existing sign-out `<form>` was relocated from `dashboard.astro` into the dropdown. All §5 contracts hold (FormField + PasswordToggle, JSON `fetch`, 401→"Wrong password", `window.location.href="/"`). Decomposition only — no behavioural change to the delete flow.
+- **`astro.config.mjs` — added `vite.resolve.dedupe: ["react", "react-dom"]`.** The dashboard now mounts two `client:only="react"` islands (`AccountMenu` + `UploadFlow`); deduping prevents duplicate React copies from breaking hooks.
+
 ---
 
 ## Phase 3: Tests and Verification
@@ -467,15 +472,15 @@ For local dev, add it to `.env.local` (which is gitignored).
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run typecheck`
-- [ ] 2.2 Linting passes: `npm run lint`
+- [x] 2.1 Type checking passes: `npm run typecheck`
+- [x] 2.2 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.3 "Delete account" button is visible on the dashboard
+- [x] 2.3 "Delete account" option is visible in the account dropdown menu on the dashboard
 - [ ] 2.4 Clicking it opens the password modal
-- [ ] 2.5 Wrong password shows "Wrong password" inline; modal stays open
-- [ ] 2.6 Correct password triggers deletion; browser redirects to `/`
+- [x] 2.5 Wrong password shows "Wrong password" inline; modal stays open
+- [x] 2.6 Correct password triggers deletion; browser redirects to `/`
 - [ ] 2.7 Old credentials rejected after deletion
 - [ ] 2.8 No storage files remain for the deleted user (Supabase Studio)
 - [ ] 2.9 No auth user record remains for the deleted user (Supabase Studio)

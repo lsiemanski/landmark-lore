@@ -57,3 +57,17 @@
 - **Problem**: A file with many concerns is hard to navigate, review, and test in isolation — changes to one concern risk touching another unintentionally.
 - **Rule**: Keep files under 250 lines; split by single responsibility when a file approaches the limit.
 - **Applies to**: plan, implement, plan-review, impl-review
+
+## Always use text-justify for paragraph text in UI components
+
+- **Context**: Any UI component with paragraph text (`src/components/**`)
+- **Problem**: Ragged right edge looks inconsistent in UI blocks.
+- **Rule**: Always apply `text-justify` to paragraph text in UI components.
+- **Applies to**: implement, impl-review
+
+## Use client:only="react" for interactive React components
+
+- **Context**: Astro pages mounting interactive React components (`src/pages/**/*.astro`)
+- **Problem**: `client:load` triggers SSR of components that use browser-only hooks, causing a `TypeError: jsxDEV is not a function` at runtime.
+- **Rule**: Always use `client:only="react"` for interactive React components that use hooks or browser APIs; never `client:load`.
+- **Applies to**: plan, implement, impl-review
