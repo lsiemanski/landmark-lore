@@ -16,6 +16,22 @@ export const JPEG_QUALITY = 0.8;
 export const CLIENT_BYTE_CAP = 5 * 1024 * 1024;
 
 /**
+ * Target dimensions for a downscale: scale so the long edge ≤ {@link maxEdge},
+ * preserving aspect ratio and never upscaling. Pure (no canvas) so the scaling
+ * math is testable in isolation.
+ */
+export function computeTargetDimensions(
+  srcW: number,
+  srcH: number,
+  maxEdge: number = MAX_EDGE,
+): { width: number; height: number } {
+  const long = Math.max(srcW, srcH);
+  if (long <= maxEdge) return { width: srcW, height: srcH };
+  const scale = maxEdge / long;
+  return { width: Math.round(srcW * scale), height: Math.round(srcH * scale) };
+}
+
+/**
  * Decode `blob`, honor its EXIF orientation, scale so the long edge ≤ {@link MAX_EDGE}
  * (aspect ratio preserved, never upscaled), and re-encode as JPEG.
  *
@@ -27,16 +43,7 @@ export async function downscale(blob: Blob): Promise<Blob> {
   }
 
   const bitmap = await createImageBitmap(blob, { imageOrientation: "from-image" });
-  const { width: srcW, height: srcH } = bitmap;
-
-  let dstW = srcW;
-  let dstH = srcH;
-  const long = Math.max(srcW, srcH);
-  if (long > MAX_EDGE) {
-    const scale = MAX_EDGE / long;
-    dstW = Math.round(srcW * scale);
-    dstH = Math.round(srcH * scale);
-  }
+  const { width: dstW, height: dstH } = computeTargetDimensions(bitmap.width, bitmap.height);
 
   const canvas = document.createElement("canvas");
   canvas.width = dstW;

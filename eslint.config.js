@@ -69,7 +69,7 @@ const astroConfig = tseslint.config({
 });
 
 const testConfig = tseslint.config({
-  files: ["test/**/*.test.ts"],
+  files: ["test/**/*.test.{ts,tsx}"],
   rules: {
     "@typescript-eslint/no-unsafe-assignment": "off",
     "@typescript-eslint/no-unsafe-member-access": "off",
