@@ -407,19 +407,19 @@ The `request_id` column is nullable, so the migration applies to existing rows w
 
 #### Automated
 
-- [ ] 3.1 TypeScript compiles: `npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
-- [ ] 3.13 Full test suite passes: `npm test`
+- [x] 3.1 TypeScript compiles: `npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Workers bundle dry-run succeeds: `npx wrangler deploy --dry-run`
+- [x] 3.13 Full test suite passes: `npm test`
 
 #### Manual
 
-- [ ] 3.4 `/dashboard` unauthenticated redirects to `/auth/signin` (unchanged)
-- [ ] 3.5 `/dashboard` authenticated renders upload form (file input + "Identify" button) as main content
-- [ ] 3.6 Recognisable landmark: spinner → result panel with subject name, description, saved confirmation
-- [ ] 3.7 Unidentifiable photo: spinner → unrecognised panel with "Try another photo" CTA
-- [ ] 3.8 "Identify another" resets to idle
-- [ ] 3.9 "Try another photo" resets to idle
-- [ ] 3.10 Quota error: 429 panel shows limit and used values
-- [ ] 3.11 No browser console errors across all flows
-- [ ] 3.12 `MAX_EDGE` in `src/lib/client/downscale.ts` is `2048`; a saved photo's stored object has a longest edge of 2048px (verify dimensions of the file in the `photos` bucket)
+- [x] 3.4 `/dashboard` unauthenticated redirects to `/auth/signin` (unchanged)
+- [x] 3.5 `/dashboard` authenticated renders upload form (file input + "Identify" button) as main content
+- [x] 3.6 Recognisable landmark: spinner → result panel with subject name, description, saved confirmation
+- [x] 3.7 Unidentifiable photo: spinner → unrecognised panel with "Try another photo" CTA
+- [x] 3.8 "Identify another" resets to idle
+- [x] 3.9 "Try another photo" resets to idle
+- [x] 3.10 Quota error: 429 panel shows limit and used values
+- [x] 3.11 No browser console errors across all flows
+- [x] 3.12 `MAX_EDGE` in `src/lib/client/downscale.ts` is `2048`; a saved photo's stored object has a longest edge of 2048px (verify dimensions of the file in the `photos` bucket)

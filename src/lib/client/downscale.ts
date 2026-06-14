@@ -7,7 +7,7 @@
  */
 
 /** Longest edge (px) of the downsized image. Larger images scale down to this; smaller ones are left as-is. */
-export const MAX_EDGE = 1024;
+export const MAX_EDGE = 2048;
 
 /** JPEG quality for the `canvas.toBlob` re-encode. */
 export const JPEG_QUALITY = 0.8;
