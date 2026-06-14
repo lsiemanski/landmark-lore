@@ -472,18 +472,18 @@ For local dev, add it to `.env.local` (which is gitignored).
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run typecheck`
-- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.1 Type checking passes: `npm run typecheck` — bfaa108
+- [x] 2.2 Linting passes: `npm run lint` — bfaa108
 
 #### Manual
 
-- [x] 2.3 "Delete account" option is visible in the account dropdown menu on the dashboard
-- [x] 2.4 Clicking it opens the password modal
-- [x] 2.5 Wrong password shows "Wrong password" inline; modal stays open
-- [x] 2.6 Correct password triggers deletion; browser redirects to `/`
-- [x] 2.7 Old credentials rejected after deletion
-- [x] 2.8 No storage files remain for the deleted user (Supabase Studio)
-- [x] 2.9 No auth user record remains for the deleted user (Supabase Studio)
+- [x] 2.3 "Delete account" option is visible in the account dropdown menu on the dashboard — bfaa108
+- [x] 2.4 Clicking it opens the password modal — bfaa108
+- [x] 2.5 Wrong password shows "Wrong password" inline; modal stays open — bfaa108
+- [x] 2.6 Correct password triggers deletion; browser redirects to `/` — bfaa108
+- [x] 2.7 Old credentials rejected after deletion — bfaa108
+- [x] 2.8 No storage files remain for the deleted user (Supabase Studio) — bfaa108
+- [x] 2.9 No auth user record remains for the deleted user (Supabase Studio) — bfaa108
 
 ### Phase 3: Tests and Verification
 

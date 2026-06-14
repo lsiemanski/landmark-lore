@@ -35,7 +35,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done   |
 | S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | ready  |
 | S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | ready  |
-| S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | ready  |
+| S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | done   |
 
 ## Streams
 
@@ -150,7 +150,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** FR-001 and FR-002 are present in the baseline scaffold; this slice adds FR-010 (password reset) and verifies the complete auth flow end-to-end. Minimal risk, but required before any user other than the owner can access the product.
-- **Status:** ready
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -189,3 +189,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-02: (foundation) AI provider chosen, key configured, test identification call verified** — Archived 2026-06-12 → `context/archive/2026-06-05-ai-provider-spike/`. Lesson: —.
 - **F-03: (foundation) Vitest runner configured; identification-contract integration tests pass** — Archived 2026-06-12 → `context/archive/2026-06-12-testing-harness-bootstrap/`. Lesson: —.
 - **S-01: upload a photo, receive identification, and save it to the archive** — Implemented 2026-06-14. Change ID: `first-identification-and-save`. Unlocks S-02, S-03.
+- **S-04: user can create an account, sign in, and reset their password via email** — Archived 2026-06-14 → `context/archive/2026-06-14-account-lifecycle/`. Lesson: —.
