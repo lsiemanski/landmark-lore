@@ -50,6 +50,19 @@ describe("reset-password route — success", () => {
   });
 });
 
+describe("reset-password route — expired recovery session", () => {
+  it("redirects to ?error=session_expired and does not call updateUser when no user", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
+
+    const password = "new-secure-password-123";
+    const response = await POST(makeAPIContext(makeFormData(password, password)));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toContain("?error=session_expired");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+});
+
 describe("reset-password route — Supabase update error", () => {
   it("redirects to ?error=update_failed when updateUser returns an error", async () => {
     mockUpdateUser.mockResolvedValueOnce({ error: { message: "Password update failed" } });

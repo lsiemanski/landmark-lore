@@ -85,6 +85,10 @@ describe("delete-account route — success with files", () => {
     expect(mockStorageRemove).toHaveBeenCalledOnce();
     expect(mockDeleteUser).toHaveBeenCalledWith("user-123");
     expect(mockSignOut).toHaveBeenCalledOnce();
+
+    // Storage cleanup must run before the auth user is deleted — once the user
+    // is gone there is no prefix to list, so out-of-order would orphan files.
+    expect(mockStorageRemove.mock.invocationCallOrder[0]).toBeLessThan(mockDeleteUser.mock.invocationCallOrder[0]);
   });
 });
 

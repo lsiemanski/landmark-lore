@@ -379,7 +379,7 @@ Adds unit tests for the three new API endpoints and documents the manual smoke t
 
 - Mock `@/lib/supabase` (`createClient`) via `vi.hoisted` for user client operations
 - Mock `@/lib/supabase-admin` (`createAdminClient`) via `vi.hoisted` for admin operations
-- Cases: (a) wrong password — 401 JSON, no storage or user deletion calls; (b) success — `signInWithPassword` called (returns user), storage list + remove called, `auth.admin.deleteUser` called, `signOut` called, returns `{ success: true }`; (c) no photos in storage — storage `list` returns empty array, `remove` not called, deletion proceeds; (d) pagination — `list` returns a full page (e.g. 100 items) then a short page; assert `list` is called more than once and every path across both pages is passed to `remove` (no files orphaned past the first page)
+- Cases: (a) wrong password — 401 JSON, no storage or user deletion calls; (b) success — `signInWithPassword` called (returns user), storage list + remove called, `auth.admin.deleteUser` called, `signOut` called, returns `{ success: true }`; (c) no photos in storage — storage `list` returns empty array, `remove` not called, deletion proceeds; (d) pagination — the endpoint re-lists from offset 0 after each delete (deleting shrinks the list), so mock `list` to return a full page (e.g. 100 items) then an empty page; assert `list` is called more than once (the loop continued past the first page) and that the full page's 100 paths were passed to `remove` (no files orphaned)
 
 ---
 
