@@ -446,18 +446,18 @@ For local dev, add it to `.env.local` (which is gitignored).
 
 #### Automated
 
-- [ ] 1.1 Type checking passes: `npm run check`
-- [ ] 1.2 Linting passes: `npm run lint`
+- [x] 1.1 Type checking passes: `npm run check`
+- [x] 1.2 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.3 "Forgot password?" link appears below the password field on `/auth/signin`
-- [ ] 1.4 Submitting `/auth/forgot-password` with any email shows the "Check your inbox" state
-- [ ] 1.5 Password reset email appears in local Inbucket (http://localhost:54324)
-- [ ] 1.6 Clicking the email link arrives at `/auth/reset-password` with a valid session
-- [ ] 1.7 Submitting a new password redirects to `/auth/signin` with the success banner
-- [ ] 1.8 Signing in with the new password succeeds
-- [ ] 1.9 Expired/invalid link at `/auth/callback` redirects to `/auth/forgot-password?error=link_invalid`
+- [x] 1.3 "Forgot password?" link appears below the password field on `/auth/signin`
+- [x] 1.4 Submitting `/auth/forgot-password` with any email shows the "Check your inbox" state
+- [x] 1.5 Password reset email appears in local Inbucket (http://localhost:54324)
+- [x] 1.6 Clicking the email link arrives at `/auth/reset-password` with a valid session
+- [x] 1.7 Submitting a new password redirects to `/auth/signin` with the success banner
+- [x] 1.8 Signing in with the new password succeeds
+- [x] 1.9 Expired/invalid link at `/auth/callback` redirects to `/auth/forgot-password?error=link_invalid`
 
 ### Phase 2: Account Deletion
 

@@ -77,6 +77,12 @@ export default function SignInForm({ serverError }: Props) {
         }
       />
 
+      <div className="text-right">
+        <a href="/auth/forgot-password" className="text-sm text-purple-300 hover:underline">
+          Forgot password?
+        </a>
+      </div>
+
       <ServerError message={serverError} />
 
       <SubmitButton pendingText="Signing in..." icon={<LogIn className="size-4" />}>

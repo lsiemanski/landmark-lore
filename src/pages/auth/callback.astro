@@ -1,0 +1,22 @@
+---
+import { createClient } from "@/lib/supabase";
+
+const INVALID = "/auth/forgot-password?error=link_invalid";
+
+const code = Astro.url.searchParams.get("code");
+const next = Astro.url.searchParams.get("next");
+
+let destination = INVALID;
+
+if (code) {
+  const supabase = createClient(Astro.request.headers, Astro.cookies);
+  if (supabase) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      destination = next ?? "/";
+    }
+  }
+}
+
+return Astro.redirect(destination);
+---
