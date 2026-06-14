@@ -1,5 +1,6 @@
 import { IDENTIFY_MODEL, IDENTIFY_DAILY_LIMIT } from "astro:env/server";
 import { MODELS } from "./models";
+import { ALLOWED_IMAGE_TYPES } from "@/lib/media-types";
 
 /**
  * Operational configuration for the identify endpoint. Centralised here so the
@@ -22,7 +23,7 @@ export const IDENTIFY_CONFIG = {
   /** Max accepted upload size in bytes (after client-side downscale). */
   maxBytes: 5 * 1024 * 1024,
   /** Accepted upload media types. */
-  allowedTypes: ["image/jpeg", "image/png", "image/webp"] as readonly string[],
+  allowedTypes: ALLOWED_IMAGE_TYPES as readonly string[],
   /** OpenRouter API base URL (OpenAI-compatible). */
   openrouterBaseUrl: "https://openrouter.ai/api/v1",
 } as const;

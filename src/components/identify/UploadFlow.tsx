@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { downscale } from "@/lib/client/downscale";
+import { ACCEPT_IMAGE_TYPES } from "@/lib/media-types";
 import { Button } from "@/components/ui/button";
-import type { IdentificationResult } from "@/lib/ai/identification";
+import { IdentificationResult } from "@/components/identify/IdentificationResult";
+import type { IdentificationResult as IdentificationResultData } from "@/lib/ai/identification";
 
 type FlowState =
   | { status: "idle" }
   | { status: "working"; previewUrl: string }
-  | { status: "identified"; previewUrl: string; result: IdentificationResult; photoId: string }
-  | { status: "unrecognized"; previewUrl: string; result: IdentificationResult }
+  | { status: "identified"; previewUrl: string; result: IdentificationResultData; photoId: string }
+  | { status: "unrecognized"; previewUrl: string; result: IdentificationResultData }
   | { status: "error"; kind: "quota"; limit: number; used: number }
   | { status: "error"; kind: "general"; message: string };
 
@@ -48,7 +50,7 @@ export default function UploadFlow() {
 
       const res = await fetch("/api/identify", { method: "POST", body: form });
       const json = (await res.json()) as {
-        result?: IdentificationResult;
+        result?: IdentificationResultData;
         photoId?: string;
         error?: string;
         limit?: number;
@@ -90,7 +92,7 @@ export default function UploadFlow() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={ACCEPT_IMAGE_TYPES}
             onChange={(e) => {
               setFile(e.target.files?.[0] ?? null);
             }}
@@ -129,10 +131,7 @@ export default function UploadFlow() {
           alt={flowState.result.subjectName}
           className="mx-auto block w-full max-w-sm rounded-xl object-contain"
         />
-        <div>
-          <h2 className="text-xl font-bold text-white">{flowState.result.subjectName}</h2>
-          <p className="mt-2 text-justify text-sm leading-relaxed text-blue-100/80">{flowState.result.description}</p>
-        </div>
+        <IdentificationResult title={flowState.result.subjectName} description={flowState.result.description} />
         <div className="flex items-center gap-2 text-sm text-green-400">
           <CheckCircle2 className="size-4" />
           Saved to your archive
@@ -156,10 +155,7 @@ export default function UploadFlow() {
           alt="Unidentified photo"
           className="mx-auto block w-full max-w-sm rounded-xl object-contain"
         />
-        <div>
-          <h2 className="text-xl font-bold text-white">Couldn&apos;t identify this photo</h2>
-          <p className="mt-2 text-justify text-sm leading-relaxed text-blue-100/80">{flowState.result.description}</p>
-        </div>
+        <IdentificationResult title="Couldn't identify this photo" description={flowState.result.description} />
         <Button
           type="button"
           onClick={resetToIdle}

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import { Sparkles } from "lucide-react";
 import { downscale } from "@/lib/client/downscale";
+import { ACCEPT_IMAGE_TYPES } from "@/lib/media-types";
 import { Button } from "@/components/ui/button";
 
 interface IdentifyResult {
@@ -86,7 +87,7 @@ export default function IdentifyHarness() {
           <span className="mb-2 block text-sm font-medium text-gray-300">Photo</span>
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={ACCEPT_IMAGE_TYPES}
             onChange={handleFileChange}
             className="block w-full cursor-pointer rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white file:mr-3 file:rounded file:border-0 file:bg-white/20 file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-white/30"
           />
