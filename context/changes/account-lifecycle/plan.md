@@ -489,16 +489,16 @@ For local dev, add it to `.env.local` (which is gitignored).
 
 #### Automated
 
-- [x] 3.1 Forgot-password tests pass: `npm run test -- test/integration/forgot-password-route.test.ts`
-- [x] 3.2 Reset-password tests pass: `npm run test -- test/integration/reset-password-route.test.ts`
-- [x] 3.3 Delete-account tests pass: `npm run test -- test/integration/delete-account-route.test.ts`
-- [x] 3.4 Full test suite passes: `npm run test`
-- [x] 3.5 Type checking passes: `npm run typecheck`
-- [x] 3.6 Linting passes: `npm run lint`
+- [x] 3.1 Forgot-password tests pass: `npm run test -- test/integration/forgot-password-route.test.ts` — 262d2b8
+- [x] 3.2 Reset-password tests pass: `npm run test -- test/integration/reset-password-route.test.ts` — 262d2b8
+- [x] 3.3 Delete-account tests pass: `npm run test -- test/integration/delete-account-route.test.ts` — 262d2b8
+- [x] 3.4 Full test suite passes: `npm run test` — 262d2b8
+- [x] 3.5 Type checking passes: `npm run typecheck` — 262d2b8
+- [x] 3.6 Linting passes: `npm run lint` — 262d2b8
 
 #### Manual
 
-- [x] 3.7 Full password reset loop verified end-to-end
-- [x] 3.8 Full deletion loop verified end-to-end
-- [x] 3.9 Deletion cascade: no storage files, no DB rows, no auth user for deleted account (Supabase Studio)
-- [x] 3.10 Sign-up and sign-in regressions: both flows work as before
+- [x] 3.7 Full password reset loop verified end-to-end — 262d2b8
+- [x] 3.8 Full deletion loop verified end-to-end — 262d2b8
+- [x] 3.9 Deletion cascade: no storage files, no DB rows, no auth user for deleted account (Supabase Studio) — 262d2b8
+- [x] 3.10 Sign-up and sign-in regressions: both flows work as before — 262d2b8
