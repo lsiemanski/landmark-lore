@@ -584,15 +584,15 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [x] 4.1 TypeScript passes: `npm run typecheck`
-- [x] 4.2 UploadFlow source remains under 250 lines
+- [x] 4.1 TypeScript passes: `npm run typecheck` — b2d2275
+- [x] 4.2 UploadFlow source remains under 250 lines — b2d2275
 
 #### Manual
 
-- [x] 4.3 Save / Discard buttons and folder picker appear after identification
-- [x] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/gallery` reflects it
-- [x] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/gallery`
-- [x] 4.6 "Discard": flow resets to idle; photo absent from `/gallery`
-- [x] 4.7 Folders API failure: Save / Discard still present; no picker; Save defaults to Uncategorized
-- [x] 4.8 Buttons disabled while request is in-flight; "Identify another" resets the full flow
-- [x] 4.9 "View in gallery →" link appears in the saved state and navigates to `/gallery`
+- [x] 4.3 Save / Discard buttons and folder picker appear after identification — b2d2275
+- [x] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/gallery` reflects it — b2d2275
+- [x] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/gallery` — b2d2275
+- [x] 4.6 "Discard": flow resets to idle; photo absent from `/gallery` — b2d2275
+- [x] 4.7 Folders API failure: Save / Discard still present; no picker; Save defaults to Uncategorized — b2d2275
+- [x] 4.8 Buttons disabled while request is in-flight; "Identify another" resets the full flow — b2d2275
+- [x] 4.9 "View in gallery →" link appears in the saved state and navigates to `/gallery` — b2d2275
