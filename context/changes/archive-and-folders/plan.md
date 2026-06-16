@@ -471,6 +471,8 @@ If the folders fetch fails, skip `FolderPicker` entirely — show Save / Discard
 
 The file must stay under 250 lines — `FolderPicker` extraction in step 1 keeps this within budget.
 
+> **Addendum (impl, 2026-06-16):** Beyond the planned `FolderPicker` extraction, the `identified` and `saved` render branches were also extracted into a new `src/components/identify/PostIdentifyPanel.tsx` (the panel that shows the result + folder picker + Save/Discard, and the post-save "Saved in [folder] ✓" + "Identify another" / "View in gallery →" state). `UploadFlow` owns all state and the save/discard/reset handlers and passes them down as props; `PostIdentifyPanel` is presentational. This keeps `UploadFlow` at 246 lines (under the 250 budget) and isolates the post-identify UI. Not in the original step list, but it's the same budget-driven extraction rationale as `FolderPicker`.
+
 ### Success Criteria
 
 #### Automated Verification
@@ -582,15 +584,15 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [ ] 4.1 TypeScript passes: `npm run typecheck`
-- [ ] 4.2 UploadFlow source remains under 250 lines
+- [x] 4.1 TypeScript passes: `npm run typecheck`
+- [x] 4.2 UploadFlow source remains under 250 lines
 
 #### Manual
 
-- [ ] 4.3 Save / Discard buttons and folder picker appear after identification
-- [ ] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/gallery` reflects it
-- [ ] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/gallery`
-- [ ] 4.6 "Discard": flow resets to idle; photo absent from `/gallery`
-- [ ] 4.7 Folders API failure: Save / Discard still present; no picker; Save defaults to Uncategorized
-- [ ] 4.8 Buttons disabled while request is in-flight; "Identify another" resets the full flow
-- [ ] 4.9 "View in gallery →" link appears in the saved state and navigates to `/gallery`
+- [x] 4.3 Save / Discard buttons and folder picker appear after identification
+- [x] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/gallery` reflects it
+- [x] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/gallery`
+- [x] 4.6 "Discard": flow resets to idle; photo absent from `/gallery`
+- [x] 4.7 Folders API failure: Save / Discard still present; no picker; Save defaults to Uncategorized
+- [x] 4.8 Buttons disabled while request is in-flight; "Identify another" resets the full flow
+- [x] 4.9 "View in gallery →" link appears in the saved state and navigates to `/gallery`

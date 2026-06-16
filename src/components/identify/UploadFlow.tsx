@@ -1,22 +1,30 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { downscale } from "@/lib/client/downscale";
 import { ACCEPT_IMAGE_TYPES } from "@/lib/media-types";
 import { Button } from "@/components/ui/button";
 import { IdentificationResult } from "@/components/identify/IdentificationResult";
+import PostIdentifyPanel from "@/components/identify/PostIdentifyPanel";
 import type { IdentificationResult as IdentificationResultData } from "@/lib/ai/identification";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/folders";
+import type { FolderWithCount } from "@/lib/archive/folders";
 
 type FlowState =
   | { status: "idle" }
   | { status: "working"; previewUrl: string }
   | { status: "identified"; previewUrl: string; result: IdentificationResultData; photoId: string }
   | { status: "unrecognized"; previewUrl: string; result: IdentificationResultData }
+  | { status: "saved"; subjectName: string; folderName: string }
   | { status: "error"; kind: "quota"; limit: number; used: number }
   | { status: "error"; kind: "general"; message: string };
 
 export default function UploadFlow() {
   const [file, setFile] = useState<File | null>(null);
   const [flowState, setFlowState] = useState<FlowState>({ status: "idle" });
+  const [folders, setFolders] = useState<FolderWithCount[] | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlight = useRef(false);
 
@@ -28,26 +36,38 @@ export default function UploadFlow() {
     };
   }, [previewUrl]);
 
+  useEffect(() => {
+    if (flowState.status !== "identified") return;
+    fetch("/api/archive/folders")
+      .then((r) => r.json() as Promise<{ folders: FolderWithCount[] }>)
+      .then(({ folders: f }) => {
+        setFolders(f);
+        setSelectedFolderId(f.find((x) => x.name === DEFAULT_FOLDER_NAME)?.id ?? f[0].id);
+      })
+      .catch(() => {
+        setFolders(null);
+      });
+  }, [flowState.status]);
+
   function resetToIdle() {
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setFlowState({ status: "idle" });
+    setFolders(null);
+    setSelectedFolderId("");
   }
 
   async function handleIdentify() {
     if (!file || inFlight.current) return;
     inFlight.current = true;
-
     try {
       const requestId = crypto.randomUUID();
       const downsized = await downscale(file);
       const url = URL.createObjectURL(downsized);
       setFlowState({ status: "working", previewUrl: url });
-
       const form = new FormData();
       form.append("photo", downsized, "photo.jpg");
       form.append("request_id", requestId);
-
       const res = await fetch("/api/identify", { method: "POST", body: form });
       const json = (await res.json()) as {
         result?: IdentificationResultData;
@@ -56,7 +76,6 @@ export default function UploadFlow() {
         limit?: number;
         used?: number;
       };
-
       if (!res.ok) {
         if (res.status === 429) {
           setFlowState({ status: "error", kind: "quota", limit: json.limit ?? 0, used: json.used ?? 0 });
@@ -65,7 +84,6 @@ export default function UploadFlow() {
         }
         return;
       }
-
       if (json.photoId && json.result) {
         setFlowState({ status: "identified", previewUrl: url, result: json.result, photoId: json.photoId });
       } else if (json.result) {
@@ -81,6 +99,43 @@ export default function UploadFlow() {
       });
     } finally {
       inFlight.current = false;
+    }
+  }
+
+  async function handleSave() {
+    if (flowState.status !== "identified" || saving) return;
+    setSaving(true);
+    const { photoId, result } = flowState;
+    const uncatId = folders?.find((f) => f.name === DEFAULT_FOLDER_NAME)?.id;
+    const folderName = folders?.find((f) => f.id === selectedFolderId)?.name ?? DEFAULT_FOLDER_NAME;
+    try {
+      if (selectedFolderId && selectedFolderId !== uncatId) {
+        const res = await fetch(`/api/archive/photos/${photoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folderId: selectedFolderId }),
+        });
+        if (!res.ok) throw new Error("Move failed");
+      }
+      setFlowState({ status: "saved", subjectName: result.subjectName, folderName });
+    } catch {
+      setFlowState({ status: "saved", subjectName: result.subjectName, folderName: DEFAULT_FOLDER_NAME });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDiscard() {
+    if (flowState.status !== "identified" || discarding) return;
+    setDiscarding(true);
+    try {
+      const res = await fetch(`/api/archive/photos/${flowState.photoId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Discard failed");
+      resetToIdle();
+    } catch {
+      setFlowState({ status: "error", kind: "general", message: "Couldn't discard the photo. Please try again." });
+    } finally {
+      setDiscarding(false);
     }
   }
 
@@ -123,27 +178,19 @@ export default function UploadFlow() {
     );
   }
 
-  if (flowState.status === "identified") {
+  if (flowState.status === "identified" || flowState.status === "saved") {
     return (
-      <div className="space-y-6">
-        <img
-          src={flowState.previewUrl}
-          alt={flowState.result.subjectName}
-          className="mx-auto block w-full max-w-sm rounded-xl object-contain"
-        />
-        <IdentificationResult title={flowState.result.subjectName} description={flowState.result.description} />
-        <div className="flex items-center gap-2 text-sm text-green-400">
-          <CheckCircle2 className="size-4" />
-          Saved to your archive
-        </div>
-        <Button
-          type="button"
-          onClick={resetToIdle}
-          className="w-full cursor-pointer rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
-        >
-          Identify another
-        </Button>
-      </div>
+      <PostIdentifyPanel
+        flowState={flowState}
+        folders={folders}
+        selectedFolderId={selectedFolderId}
+        saving={saving}
+        discarding={discarding}
+        onSave={handleSave}
+        onDiscard={handleDiscard}
+        onFolderChange={setSelectedFolderId}
+        onReset={resetToIdle}
+      />
     );
   }
 
@@ -167,7 +214,6 @@ export default function UploadFlow() {
     );
   }
 
-  // flowState.status === "error"
   if (flowState.kind === "quota") {
     return (
       <div className="space-y-4">

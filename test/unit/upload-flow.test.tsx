@@ -62,16 +62,44 @@ describe("UploadFlow — idle gate", () => {
 });
 
 describe("UploadFlow — recognised result", () => {
-  it("renders the subject, description and Saved confirmation", async () => {
-    server.use(http.post("*/api/identify", () => HttpResponse.json(recognised())));
+  it("renders the subject, description and Save/Discard actions", async () => {
+    server.use(
+      http.post("*/api/identify", () => HttpResponse.json(recognised())),
+      http.get("*/api/archive/folders", () =>
+        HttpResponse.json({
+          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+        }),
+      ),
+    );
     const user = userEvent.setup();
     render(<UploadFlow />);
     await selectAndIdentify(user);
 
     expect(await screen.findByRole("heading", { name: "Eiffel Tower" })).toBeInTheDocument();
     expect(screen.getByText("An iron tower in Paris.")).toBeInTheDocument();
-    expect(screen.getByText("Saved to your archive")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save to archive/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /discard/i })).toBeInTheDocument();
+  });
+
+  it("transitions to saved state and shows Identify another after Save", async () => {
+    server.use(
+      http.post("*/api/identify", () => HttpResponse.json(recognised())),
+      http.get("*/api/archive/folders", () =>
+        HttpResponse.json({
+          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<UploadFlow />);
+    await selectAndIdentify(user);
+    await screen.findByRole("button", { name: /save to archive/i });
+
+    await user.click(screen.getByRole("button", { name: /save to archive/i }));
+
+    expect(await screen.findByText(/saved in/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /identify another/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view in gallery/i })).toBeInTheDocument();
   });
 });
 
@@ -180,13 +208,19 @@ describe("UploadFlow — request contract", () => {
         if (typeof id === "string") ids.push(id);
         return HttpResponse.json(recognised());
       }),
+      http.get("*/api/archive/folders", () =>
+        HttpResponse.json({
+          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+        }),
+      ),
     );
     const user = userEvent.setup();
     render(<UploadFlow />);
 
     await selectAndIdentify(user);
-    await screen.findByRole("heading", { name: "Eiffel Tower" });
-    await user.click(screen.getByRole("button", { name: /identify another/i }));
+    await screen.findByRole("button", { name: /save to archive/i });
+    await user.click(screen.getByRole("button", { name: /save to archive/i }));
+    await user.click(await screen.findByRole("button", { name: /identify another/i }));
 
     await selectAndIdentify(user);
     await screen.findByRole("heading", { name: "Eiffel Tower" });
@@ -198,13 +232,21 @@ describe("UploadFlow — request contract", () => {
 
 describe("UploadFlow — reset", () => {
   it("returns to idle and revokes the preview URL on Identify another", async () => {
-    server.use(http.post("*/api/identify", () => HttpResponse.json(recognised())));
+    server.use(
+      http.post("*/api/identify", () => HttpResponse.json(recognised())),
+      http.get("*/api/archive/folders", () =>
+        HttpResponse.json({
+          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+        }),
+      ),
+    );
     const user = userEvent.setup();
     render(<UploadFlow />);
     await selectAndIdentify(user);
-    await screen.findByRole("heading", { name: "Eiffel Tower" });
+    await screen.findByRole("button", { name: /save to archive/i });
 
-    await user.click(screen.getByRole("button", { name: /identify another/i }));
+    await user.click(screen.getByRole("button", { name: /save to archive/i }));
+    await user.click(await screen.findByRole("button", { name: /identify another/i }));
 
     expect(screen.getByLabelText("Choose a photo")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /identify/i })).toBeDisabled();
