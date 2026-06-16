@@ -525,20 +525,20 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [x] 1.1 TypeScript passes: `npm run typecheck`
-- [x] 1.11 Auth helpers extracted to `src/lib/api/auth.ts`; `identify.ts` + `delete-account.ts` import them; `npm run test:integration` stays green
-- [x] 1.2 `GET /api/archive/folders` returns 401 when unauthenticated, 200 with folder list when authenticated
-- [x] 1.3 `POST /api/archive/folders` creates a folder; re-posting with name "Uncategorized" returns 400
-- [x] 1.4 `PATCH /api/archive/folders/[id]` renames a folder; naming the Uncategorized folder returns 403
-- [x] 1.5 `DELETE /api/archive/folders/[id]` on a non-empty folder returns 409
-- [x] 1.6 `GET /api/archive/photos` returns identified photos with non-empty `signedUrl` fields
-- [x] 1.7 `PATCH /api/archive/photos/[id]` updates `folder_id` in the DB
-- [x] 1.8 `DELETE /api/archive/photos/[id]` removes the photo row and the storage object
+- [x] 1.1 TypeScript passes: `npm run typecheck` — 023f480
+- [x] 1.11 Auth helpers extracted to `src/lib/api/auth.ts`; `identify.ts` + `delete-account.ts` import them; `npm run test:integration` stays green — 023f480
+- [x] 1.2 `GET /api/archive/folders` returns 401 when unauthenticated, 200 with folder list when authenticated — 023f480
+- [x] 1.3 `POST /api/archive/folders` creates a folder; re-posting with name "Uncategorized" returns 400 — 023f480
+- [x] 1.4 `PATCH /api/archive/folders/[id]` renames a folder; naming the Uncategorized folder returns 403 — 023f480
+- [x] 1.5 `DELETE /api/archive/folders/[id]` on a non-empty folder returns 409 — 023f480
+- [x] 1.6 `GET /api/archive/photos` returns identified photos with non-empty `signedUrl` fields — 023f480
+- [x] 1.7 `PATCH /api/archive/photos/[id]` updates `folder_id` in the DB — 023f480
+- [x] 1.8 `DELETE /api/archive/photos/[id]` removes the photo row and the storage object — 023f480
 
 #### Manual
 
-- [x] 1.9 All endpoints return the correct shape in a REST client
-- [x] 1.10 Signed URLs resolve to actual photo images in a browser
+- [x] 1.9 All endpoints return the correct shape in a REST client — 023f480
+- [x] 1.10 Signed URLs resolve to actual photo images in a browser — 023f480
 
 ### Phase 2: Archive Page — Read View
 
