@@ -7,9 +7,10 @@ interface Props {
   folders: FolderWithCount[];
   onMoved: (photoId: string, targetFolderId: string) => void;
   onDeleted: (photoId: string) => void;
+  onError: (message: string) => void;
 }
 
-export function PhotoGrid({ photos, folders, onMoved, onDeleted }: Props) {
+export function PhotoGrid({ photos, folders, onMoved, onDeleted, onError }: Props) {
   if (photos.length === 0) {
     return <p className="text-sm text-white/40">No photos yet — identify a landmark to get started.</p>;
   }
@@ -17,7 +18,14 @@ export function PhotoGrid({ photos, folders, onMoved, onDeleted }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {photos.map((photo) => (
-        <PhotoCard key={photo.id} photo={photo} folders={folders} onMoved={onMoved} onDeleted={onDeleted} />
+        <PhotoCard
+          key={photo.id}
+          photo={photo}
+          folders={folders}
+          onMoved={onMoved}
+          onDeleted={onDeleted}
+          onError={onError}
+        />
       ))}
     </div>
   );
