@@ -1,3 +1,16 @@
+import type { APIRoute } from "astro";
+
+export function apiRoute(handler: APIRoute): APIRoute {
+  return async (context) => {
+    try {
+      return await handler(context);
+    } catch (err) {
+      if (err instanceof HttpError) return err.toResponse();
+      throw err;
+    }
+  };
+}
+
 export class HttpError extends Error {
   constructor(
     readonly status: number,

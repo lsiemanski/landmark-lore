@@ -1,51 +1,33 @@
-import type { APIContext, APIRoute } from "astro";
-import { createClient, type SupabaseClient } from "@/lib/supabase";
+import type { APIRoute } from "astro";
+import type { SupabaseClient } from "@/lib/supabase";
 import { createAdminClient, type AdminSupabaseClient } from "@/lib/supabase-admin";
-import { HttpError } from "@/lib/api/http";
+import { apiRoute, HttpError } from "@/lib/api/http";
+import { requireSupabaseClient, requireAuthenticatedUser } from "@/lib/api/auth";
 import { PHOTOS_BUCKET } from "@/lib/identify/storage";
 import type { User } from "@supabase/supabase-js";
 
-export const POST: APIRoute = async (context) => {
-  try {
-    const supabase = requireSupabaseClient(context);
-    const user = await requireAuthenticatedUser(supabase);
+export const POST: APIRoute = apiRoute(async (context) => {
+  const supabase = requireSupabaseClient(context);
+  const user = await requireAuthenticatedUser(supabase);
 
-    const { password } = await parseBody(context.request);
+  const { password } = await parseBody(context.request);
 
-    await verifyPassword(supabase, user, password);
+  await verifyPassword(supabase, user, password);
 
-    const adminClient = requireAdminClient();
-    await deleteUserStorage(adminClient, user.id);
-    await deleteAuthUser(adminClient, user.id);
-    await supabase.auth.signOut();
+  const adminClient = requireAdminClient();
+  await deleteUserStorage(adminClient, user.id);
+  await deleteAuthUser(adminClient, user.id);
+  await supabase.auth.signOut();
 
-    return Response.json({ success: true });
-  } catch (err) {
-    if (err instanceof HttpError) return err.toResponse();
-    throw err;
-  }
-};
+  return Response.json({ success: true });
+});
 
 // --- Request pipeline ---------------------------------------------------------
-
-function requireSupabaseClient(context: APIContext): SupabaseClient {
-  const supabase = createClient(context.request.headers, context.cookies);
-  if (!supabase) throw new HttpError(503, { error: "Supabase not configured" });
-  return supabase;
-}
 
 function requireAdminClient(): AdminSupabaseClient {
   const adminClient = createAdminClient();
   if (!adminClient) throw new HttpError(503, { error: "Admin client not configured" });
   return adminClient;
-}
-
-async function requireAuthenticatedUser(supabase: SupabaseClient): Promise<User> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new HttpError(401, { error: "Unauthorised" });
-  return user;
 }
 
 async function parseBody(request: Request): Promise<{ password: string }> {

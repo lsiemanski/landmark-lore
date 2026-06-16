@@ -2,6 +2,7 @@ import { type SupabaseClient } from "@/lib/supabase";
 import type { IdentificationResult } from "@/lib/ai/identification";
 import { HttpError } from "@/lib/api/http";
 import { PHOTOS_BUCKET } from "@/lib/identify/storage";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/folders";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -54,7 +55,7 @@ export async function lookupDefaultFolder(supabase: SupabaseClient, userId: stri
     .from("folders")
     .select("id")
     .eq("user_id", userId)
-    .eq("name", "Uncategorized")
+    .eq("name", DEFAULT_FOLDER_NAME)
     .limit(1)
     .maybeSingle();
 

@@ -59,6 +59,8 @@ export async function requireAuthenticatedUser(supabase: SupabaseClient): Promis
 
 Unify the return type on `User` (the `delete-account.ts` copy already annotates this; `identify.ts` infers it). Refactor both existing routes to import from `@/lib/api/auth` and delete their local copies — small blast radius, covered by `test/integration/identify-route.test.ts` and `delete-account-route.test.ts`. All archive routes below import these helpers; do not re-declare them.
 
+> **Addendum (impl, 2026-06-16):** Phase 1 also introduced a shared `apiRoute(handler)` higher-order wrapper in `src/lib/api/http.ts` that centralises the `try/catch (HttpError → toResponse)` boilerplate. `identify.ts` and `delete-account.ts` were refactored to use it (dropping their local try/catch), and all new archive routes adopt it. Not in the original step-0 scope, but it removes duplicated error-handling boilerplate and keeps every route's catch behaviour identical; all integration tests stay green.
+
 #### 1. Folder lib helpers
 
 **File**: `src/lib/archive/folders.ts`
@@ -523,20 +525,20 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [ ] 1.1 TypeScript passes: `npm run typecheck`
-- [ ] 1.11 Auth helpers extracted to `src/lib/api/auth.ts`; `identify.ts` + `delete-account.ts` import them; `npm run test:integration` stays green
-- [ ] 1.2 `GET /api/archive/folders` returns 401 when unauthenticated, 200 with folder list when authenticated
-- [ ] 1.3 `POST /api/archive/folders` creates a folder; re-posting with name "Uncategorized" returns 400
-- [ ] 1.4 `PATCH /api/archive/folders/[id]` renames a folder; naming the Uncategorized folder returns 403
-- [ ] 1.5 `DELETE /api/archive/folders/[id]` on a non-empty folder returns 409
-- [ ] 1.6 `GET /api/archive/photos` returns identified photos with non-empty `signedUrl` fields
-- [ ] 1.7 `PATCH /api/archive/photos/[id]` updates `folder_id` in the DB
-- [ ] 1.8 `DELETE /api/archive/photos/[id]` removes the photo row and the storage object
+- [x] 1.1 TypeScript passes: `npm run typecheck`
+- [x] 1.11 Auth helpers extracted to `src/lib/api/auth.ts`; `identify.ts` + `delete-account.ts` import them; `npm run test:integration` stays green
+- [x] 1.2 `GET /api/archive/folders` returns 401 when unauthenticated, 200 with folder list when authenticated
+- [x] 1.3 `POST /api/archive/folders` creates a folder; re-posting with name "Uncategorized" returns 400
+- [x] 1.4 `PATCH /api/archive/folders/[id]` renames a folder; naming the Uncategorized folder returns 403
+- [x] 1.5 `DELETE /api/archive/folders/[id]` on a non-empty folder returns 409
+- [x] 1.6 `GET /api/archive/photos` returns identified photos with non-empty `signedUrl` fields
+- [x] 1.7 `PATCH /api/archive/photos/[id]` updates `folder_id` in the DB
+- [x] 1.8 `DELETE /api/archive/photos/[id]` removes the photo row and the storage object
 
 #### Manual
 
-- [ ] 1.9 All endpoints return the correct shape in a REST client
-- [ ] 1.10 Signed URLs resolve to actual photo images in a browser
+- [x] 1.9 All endpoints return the correct shape in a REST client
+- [x] 1.10 Signed URLs resolve to actual photo images in a browser
 
 ### Phase 2: Archive Page — Read View
 

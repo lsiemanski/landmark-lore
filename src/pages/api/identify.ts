@@ -1,30 +1,26 @@
-import type { APIContext, APIRoute } from "astro";
+import type { APIRoute } from "astro";
 import { OPENROUTER_API_KEY } from "astro:env/server";
-import { createClient, type SupabaseClient } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 import { identifyImage } from "@/lib/ai/identification";
-import { HttpError } from "@/lib/api/http";
+import { apiRoute, HttpError } from "@/lib/api/http";
+import { requireSupabaseClient, requireAuthenticatedUser } from "@/lib/api/auth";
 import { currentPeriod, consumeSlot, refundSlot } from "@/lib/identify/quota";
 import { parseUploadRequest, encodeForAI, hashPhoto } from "@/lib/identify/upload";
 import { checkIdempotencyCache, lookupDefaultFolder, persistPhotoAndIdentification } from "@/lib/identify/persistence";
 
-export const POST: APIRoute = async (context) => {
-  try {
-    const apiKey = requireApiKey();
-    const supabase = requireSupabaseClient(context);
-    const user = await requireAuthenticatedUser(supabase);
+export const POST: APIRoute = apiRoute(async (context) => {
+  const apiKey = requireApiKey();
+  const supabase = requireSupabaseClient(context);
+  const user = await requireAuthenticatedUser(supabase);
 
-    const { photo, requestId } = await parseUploadRequest(context.request);
-    const photoHash = await hashPhoto(photo);
+  const { photo, requestId } = await parseUploadRequest(context.request);
+  const photoHash = await hashPhoto(photo);
 
-    const cached = await resolveIdempotency(supabase, user.id, requestId, photoHash);
-    if (cached) return cached;
+  const cached = await resolveIdempotency(supabase, user.id, requestId, photoHash);
+  if (cached) return cached;
 
-    return await identify(supabase, user, { photo, requestId, photoHash, apiKey });
-  } catch (err) {
-    if (err instanceof HttpError) return err.toResponse();
-    throw err;
-  }
-};
+  return await identify(supabase, user, { photo, requestId, photoHash, apiKey });
+});
 
 // --- Orchestration steps ------------------------------------------------------
 
@@ -77,18 +73,4 @@ async function identify(
 function requireApiKey(): string {
   if (!OPENROUTER_API_KEY) throw new HttpError(503, { error: "AI provider not configured" });
   return OPENROUTER_API_KEY;
-}
-
-function requireSupabaseClient(context: APIContext): SupabaseClient {
-  const supabase = createClient(context.request.headers, context.cookies);
-  if (!supabase) throw new HttpError(503, { error: "Supabase not configured" });
-  return supabase;
-}
-
-async function requireAuthenticatedUser(supabase: SupabaseClient) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new HttpError(401, { error: "Unauthorised" });
-  return user;
 }

@@ -71,3 +71,10 @@
 - **Problem**: `client:load` triggers SSR of components that use browser-only hooks, causing a `TypeError: jsxDEV is not a function` at runtime.
 - **Rule**: Always use `client:only="react"` for interactive React components that use hooks or browser APIs; never `client:load`.
 - **Applies to**: plan, implement, impl-review
+
+## Extract domain string identifiers to named constants
+
+- **Context**: Any phase that introduces domain-specific string identifiers in lib or API layers
+- **Problem**: The same literal appears in routes, lib, and tests — a rename requires grep-and-replace across all layers, and the test mock silently returns undefined for the missing export
+- **Rule**: Domain-specific magic strings should be extracted to a named constant in their canonical lib module; all routes, helpers, and tests import from there.
+- **Applies to**: implement, impl-review
