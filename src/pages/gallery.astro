@@ -6,6 +6,8 @@ import Layout from "@/layouts/Layout.astro";
 import ArchiveView from "@/components/archive/ArchiveView";
 import AccountMenu from "@/components/auth/AccountMenu";
 
+Astro.response.headers.set("Cache-Control", "private, no-store");
+
 const { user } = Astro.locals;
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 

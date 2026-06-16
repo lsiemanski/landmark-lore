@@ -346,6 +346,8 @@ Add interactive folder management to the sidebar (create, rename, delete) and a 
 
 **Contract**: Add a "+" button at the bottom of the folder list — clicking it renders an inline `<input>` below the list. Submit (Enter or blur) calls `POST /api/archive/folders`, then invokes `onFolderCreated` with the new folder. Each non-Uncategorized folder row shows a pencil icon and a trash icon on hover/focus. Pencil click replaces the folder name with an `<input>` pre-filled with the current name; Enter/blur calls `PATCH /api/archive/folders/[id]`, Escape cancels. Trash icon is disabled (visually and `aria-disabled`) if `photoCount > 0`; when enabled, sets `pendingDeleteFolder` state which triggers the confirmation dialog. File must stay under 250 lines — extract `FolderRow` as a sibling component in the same file if needed.
 
+> **Addendum (impl, 2026-06-16):** The rename/delete affordances were **not** placed as per-row pencil/trash icons in the sidebar. Instead the sidebar (`FolderSidebar.tsx`) carries only the create-folder control, and rename/delete live in a header above the photo grid (`ArchiveView.tsx`), acting on the **currently selected** folder. Pencil → inline rename input (Enter/blur commits, Escape cancels); trash → `pendingDeleteFolder` (disabled with `aria-disabled` + `cursor-not-allowed` when `photoCount > 0`); `isProtected` (`name === DEFAULT_FOLDER_NAME`) hides both for Uncategorized. Consequence: a folder must be selected before it can be renamed/deleted (no hover affordance on unselected rows). This satisfies the Phase 3 manual criteria (3.3 / 3.4 / 3.7) and keeps `FolderSidebar` small enough that the planned `FolderRow` extraction was unnecessary (106 lines). `gallery.astro` also gained a `Cache-Control: private, no-store` response header so the per-user, signed-URL page is never cached by shared/browser caches.
+
 #### 2. Confirmation dialog
 
 **File**: `src/components/archive/ConfirmDialog.tsx`
@@ -548,33 +550,33 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [x] 2.1 TypeScript passes: `npm run typecheck`
-- [x] 2.2 `/gallery` route exists in middleware `PROTECTED_ROUTES`
+- [x] 2.1 TypeScript passes: `npm run typecheck` — 0bf0c8a
+- [x] 2.2 `/gallery` route exists in middleware `PROTECTED_ROUTES` — 0bf0c8a
 
 #### Manual
 
-- [x] 2.3 `/gallery` redirects unauthenticated users to `/auth/signin`
-- [x] 2.4 Authenticated users see identified photos with thumbnails, names, and dates
-- [x] 2.5 Selecting a folder in the sidebar filters the grid
-- [x] 2.6 "All photos" shows all photos across all folders
-- [x] 2.7 Empty state appears when no identified photos exist
-- [x] 2.8 "← Dashboard" link navigates back; dashboard header shows "Gallery" link
+- [x] 2.3 `/gallery` redirects unauthenticated users to `/auth/signin` — 0bf0c8a
+- [x] 2.4 Authenticated users see identified photos with thumbnails, names, and dates — 0bf0c8a
+- [x] 2.5 Selecting a folder in the sidebar filters the grid — 0bf0c8a
+- [x] 2.6 "All photos" shows all photos across all folders — 0bf0c8a
+- [x] 2.7 Empty state appears when no identified photos exist — 0bf0c8a
+- [x] 2.8 "← Dashboard" link navigates back; dashboard header shows "Gallery" link — 0bf0c8a
 
 ### Phase 3: Folder Management + Photo Actions
 
 #### Automated
 
-- [ ] 3.1 TypeScript passes: `npm run typecheck`
+- [x] 3.1 TypeScript passes: `npm run typecheck`
 
 #### Manual
 
-- [ ] 3.2 User can create a new folder
-- [ ] 3.3 User can rename a folder; "Uncategorized" shows no pencil icon
-- [ ] 3.4 Trash icon disabled on non-empty folders; empty folders can be deleted
-- [ ] 3.5 Moving a photo updates both old and new folder views and both count badges
-- [ ] 3.8 Emptying a folder (move/delete last photo) drops its count to 0 and enables its trash without a refresh
-- [ ] 3.6 Deleting a photo: confirmation → gone from grid; cancel → unchanged
-- [ ] 3.7 "Uncategorized" folder shows no rename or delete affordances
+- [x] 3.2 User can create a new folder
+- [x] 3.3 User can rename a folder; "Uncategorized" shows no pencil icon
+- [x] 3.4 Trash icon disabled on non-empty folders; empty folders can be deleted
+- [x] 3.5 Moving a photo updates both old and new folder views and both count badges
+- [x] 3.8 Emptying a folder (move/delete last photo) drops its count to 0 and enables its trash without a refresh
+- [x] 3.6 Deleting a photo: confirmation → gone from grid; cancel → unchanged
+- [x] 3.7 "Uncategorized" folder shows no rename or delete affordances
 
 ### Phase 4: Save or Discard Decision + Folder Picker
 

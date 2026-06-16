@@ -10,7 +10,7 @@
 export const MAX_EDGE = 2048;
 
 /** JPEG quality for the `canvas.toBlob` re-encode. */
-export const JPEG_QUALITY = 0.8;
+export const JPEG_QUALITY = 1.0;
 
 /** Reject blobs larger than this before decoding, so a huge file can't tie up the main thread. */
 export const CLIENT_BYTE_CAP = 5 * 1024 * 1024;
