@@ -215,13 +215,15 @@ Build the `/archive` page shell and the read-only components (sidebar folder lis
 
 **File**: `src/middleware.ts`
 
-**Intent**: Protect `/archive` the same way `/dashboard` is protected.
+**Intent**: Protect `/gallery` the same way `/dashboard` is protected.
 
-**Contract**: Add `"/archive"` to the `PROTECTED_ROUTES` array (line 4).
+**Contract**: Add `"/gallery"` to the `PROTECTED_ROUTES` array (line 4).
 
-#### 2. Archive page shell
+> **Addendum (impl, 2026-06-16):** The user-facing page route was named **`/gallery`** (page file `src/pages/gallery.astro`, dashboard link labelled "Gallery") rather than `/archive`. The `/api/archive/*` routes and `src/lib/archive/*` modules keep the `archive` name — only the browse page is "gallery". References below and in Phase 4 use `/gallery` accordingly.
 
-**File**: `src/pages/archive.astro`
+#### 2. Gallery page shell
+
+**File**: `src/pages/gallery.astro`
 
 **Intent**: Authenticated Astro page that provides the cosmic-theme layout and mounts the interactive archive island.
 
@@ -239,7 +241,9 @@ Build the `/archive` page shell and the read-only components (sidebar folder lis
 type SelectedFolder = "all" | string; // folderId
 ```
 
-Fetches `/api/archive/folders` and `/api/archive/photos` in parallel on mount. Re-fetches photos when `selectedFolder` changes (passes `?folderId=` to photos endpoint). Renders a two-column layout: `FolderSidebar` (left, fixed width ~200px) + `PhotoGrid` (right, flex-1). Expose `onFolderSelect`, `onPhotoMoved`, `onPhotoDeleted`, `onFolderCreated`, `onFolderRenamed`, `onFolderDeleted` as local callbacks mutating state without re-fetching (optimistic update). These callbacks must keep `folders[].photoCount` in sync with the photo list in the same state update — `onPhotoMoved` decrements the source folder's count and increments the target; `onPhotoDeleted` decrements the photo's folder count; `onFolderCreated` adds the folder with count 0. The Phase 3 delete guard (trash disabled when `photoCount > 0`) reads these counts, so stale counts would leave a now-empty folder undeletable without a refresh.
+Fetches `/api/archive/folders` and `/api/archive/photos` in parallel on mount. Re-fetches photos when `selectedFolder` changes (passes `?folderId=` to photos endpoint). Renders a two-column layout: `FolderSidebar` (left, fixed width ~200px) + `PhotoGrid` (right, flex-1). Expose `onFolderSelect`, `onPhotoMoved`, `onPhotoDeleted`, `onFolderCreated`, `onFolderRenamed`, `onFolderDeleted` as local callbacks mutating state without re-fetching (optimistic update).
+
+> **Addendum (impl, 2026-06-16):** The read path was implemented with **server-side data loading** rather than client-side fetch-on-mount. `gallery.astro` calls `listFolders` / `listPhotos` directly in its frontmatter and passes `initialFolders` / `initialPhotos` as props to `ArchiveView`; the component holds them in state and filters by selected folder **client-side via `useMemo`** — no `/api/archive/photos` round-trip and no loading state. This matches the SSR data-loading pattern already used in the dashboard shell and removes the loading flash. The optimistic count-sync callback contract below is unchanged and honoured. Consequence: the `?folderId=` server filter on `GET /api/archive/photos` is currently unexercised by the UI (it remains available for future use, e.g. pagination). These callbacks must keep `folders[].photoCount` in sync with the photo list in the same state update — `onPhotoMoved` decrements the source folder's count and increments the target; `onPhotoDeleted` decrements the photo's folder count; `onFolderCreated` adds the folder with count 0. The Phase 3 delete guard (trash disabled when `photoCount > 0`) reads these counts, so stale counts would leave a now-empty folder undeletable without a refresh.
 
 #### 4. Folder sidebar
 
@@ -297,30 +301,30 @@ interface Props {
 
 `<img src={photo.signedUrl} alt={photo.subjectName} />` in a rounded card. Name truncated to one line (`truncate`). Date formatted `DD MMM YYYY` using `Date.toLocaleDateString`. No overflow menu in this phase — the `onMoved`/`onDeleted` props are wired in Phase 3.
 
-#### 7. Dashboard — archive link
+#### 7. Dashboard — gallery link
 
 **File**: `src/pages/dashboard.astro`
 
-**Intent**: Let users discover the archive from the dashboard.
+**Intent**: Let users discover the gallery from the dashboard.
 
-**Contract**: Add an "Archive" anchor link in the header row alongside the AccountMenu (line 12), styled as a subtle text link (white/60, hover white).
+**Contract**: Add a "Gallery" anchor link to `/gallery` in the header row alongside the AccountMenu (line 12), styled as a subtle text link (white/60, hover white).
 
 ### Success Criteria
 
 #### Automated Verification
 
 - TypeScript passes: `npm run typecheck`
-- `/archive` route exists in the middleware `PROTECTED_ROUTES`
+- `/gallery` route exists in the middleware `PROTECTED_ROUTES`
 
 #### Manual Verification
 
-- `/archive` redirects unauthenticated users to `/auth/signin`
+- `/gallery` redirects unauthenticated users to `/auth/signin`
 - Authenticated users see their identified photos in a grid with thumbnails, names, and dates
 - Selecting a folder in the sidebar filters the grid
 - "All photos" shows all photos across all folders
 - Empty state appears when no identified photos exist
 - "← Dashboard" link navigates back to `/dashboard`
-- Dashboard header shows "Archive" link pointing to `/archive`
+- Dashboard header shows "Gallery" link pointing to `/gallery`
 
 **Implementation Note**: Manually verify thumbnails load (signed URLs work) and folder filtering is correct before proceeding to Phase 3.
 
@@ -457,7 +461,7 @@ In the `identified` branch (lines 126–147), replace "Saved to your archive" + 
 - **"Save to archive"** button (primary): if `selectedFolderId` differs from the Uncategorized id, call `PATCH /api/archive/photos/[id]` with the selected folder; then transition to `{ status: "saved", subjectName, folderName }`. If already Uncategorized (no PATCH needed), transition directly.
 - **"Discard"** button (secondary/danger): call `DELETE /api/archive/photos/[id]`; on success, call `resetToIdle()`.
 
-In the `saved` branch, show: "✓ Saved in [folderName]" + "Identify another" button (calls `resetToIdle()`) + a "View in archive →" anchor link to `/archive`.
+In the `saved` branch, show: "✓ Saved in [folderName]" + "Identify another" button (calls `resetToIdle()`) + a "View in gallery →" anchor link to `/gallery`.
 
 Both Save and Discard buttons must be disabled while their respective requests are in-flight.
 
@@ -475,12 +479,12 @@ The file must stay under 250 lines — `FolderPicker` extraction in step 1 keeps
 #### Manual Verification
 
 - After identifying a landmark, the result shows Save / Discard buttons and a folder picker (when folders load)
-- "Save to archive" with a non-Uncategorized folder selected: photo moves; "Saved in [folder] ✓" appears; `/archive` shows it in the correct folder
+- "Save to archive" with a non-Uncategorized folder selected: photo moves; "Saved in [folder] ✓" appears; `/gallery` shows it in the correct folder
 - "Save to archive" with Uncategorized selected: photo stays in Uncategorized; success state shows
-- "Discard": photo is permanently deleted; flow resets to idle; `/archive` does not show the photo
+- "Discard": photo is permanently deleted; flow resets to idle; `/gallery` does not show the photo
 - If folders API fails, Save / Discard buttons still appear (Save defaults to Uncategorized); no picker shown
 - Save and Discard buttons are disabled while their request is in-flight
-- "Identify another" (post-save) resets the full flow; "View in archive →" link navigates to `/archive`
+- "Identify another" (post-save) resets the full flow; "View in gallery →" link navigates to `/gallery`
 
 **Implementation Note**: Manually test all three paths — save to Uncategorized, save to named folder, and discard — and verify `/archive` state after each before marking complete.
 
@@ -490,17 +494,17 @@ The file must stay under 250 lines — `FolderPicker` extraction in step 1 keeps
 
 ### Manual Testing Steps
 
-1. Sign in and go to `/dashboard` → verify "Archive" link visible in header
+1. Sign in and go to `/dashboard` → verify "Gallery" link visible in header
 2. Identify a landmark → verify Save / Discard buttons + folder picker appear → select a named folder → click "Save to archive" → verify "Saved in [folder] ✓" appears
-3. Navigate to `/archive` → verify photo appears in the correct folder and in "All photos"
-   3a. Identify another landmark → click "Discard" → verify flow resets to idle and photo absent from `/archive`
+3. Navigate to `/gallery` → verify photo appears in the correct folder and in "All photos"
+   3a. Identify another landmark → click "Discard" → verify flow resets to idle and photo absent from `/gallery`
 4. Create a new folder in the sidebar → verify it appears with count 0
 5. Rename the new folder → verify name updates
 6. Move the photo to the new folder via the overflow menu → verify it moves in the grid
 7. Delete the photo via the overflow menu → confirm dialog → verify photo removed
 8. Try to delete the now-empty folder → confirm dialog → folder removed
 9. Verify "Uncategorized" folder shows no rename/delete icons
-10. Sign out → navigate to `/archive` → verify redirect to `/auth/signin`
+10. Sign out → navigate to `/gallery` → verify redirect to `/auth/signin`
 
 ## Performance Considerations
 
@@ -544,17 +548,17 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 
 #### Automated
 
-- [ ] 2.1 TypeScript passes: `npm run typecheck`
-- [ ] 2.2 `/archive` route exists in middleware `PROTECTED_ROUTES`
+- [x] 2.1 TypeScript passes: `npm run typecheck`
+- [x] 2.2 `/gallery` route exists in middleware `PROTECTED_ROUTES`
 
 #### Manual
 
-- [ ] 2.3 `/archive` redirects unauthenticated users to `/auth/signin`
-- [ ] 2.4 Authenticated users see identified photos with thumbnails, names, and dates
-- [ ] 2.5 Selecting a folder in the sidebar filters the grid
-- [ ] 2.6 "All photos" shows all photos across all folders
-- [ ] 2.7 Empty state appears when no identified photos exist
-- [ ] 2.8 "← Dashboard" link navigates back; dashboard header shows "Archive" link
+- [x] 2.3 `/gallery` redirects unauthenticated users to `/auth/signin`
+- [x] 2.4 Authenticated users see identified photos with thumbnails, names, and dates
+- [x] 2.5 Selecting a folder in the sidebar filters the grid
+- [x] 2.6 "All photos" shows all photos across all folders
+- [x] 2.7 Empty state appears when no identified photos exist
+- [x] 2.8 "← Dashboard" link navigates back; dashboard header shows "Gallery" link
 
 ### Phase 3: Folder Management + Photo Actions
 
@@ -582,9 +586,9 @@ Photos are fetched without pagination. If a user accumulates hundreds of photos,
 #### Manual
 
 - [ ] 4.3 Save / Discard buttons and folder picker appear after identification
-- [ ] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/archive` reflects it
-- [ ] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/archive`
-- [ ] 4.6 "Discard": flow resets to idle; photo absent from `/archive`
+- [ ] 4.4 "Save to archive" with named folder: photo moves; "Saved in [folder] ✓" shows; `/gallery` reflects it
+- [ ] 4.5 "Save to archive" with Uncategorized: success state shows; photo in Uncategorized in `/gallery`
+- [ ] 4.6 "Discard": flow resets to idle; photo absent from `/gallery`
 - [ ] 4.7 Folders API failure: Save / Discard still present; no picker; Save defaults to Uncategorized
 - [ ] 4.8 Buttons disabled while request is in-flight; "Identify another" resets the full flow
-- [ ] 4.9 "View in archive →" link appears in the saved state and navigates to `/archive`
+- [ ] 4.9 "View in gallery →" link appears in the saved state and navigates to `/gallery`

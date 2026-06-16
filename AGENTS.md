@@ -24,6 +24,10 @@ Source root: `src/`. Pages live in `src/pages/`; server-only API endpoints in `s
 
 No test framework is configured — add one before implementing FR-004 / FR-005.
 
+## Naming Conventions
+
+- **Gallery vs Archive**: The user-facing name for the photo collection feature is **Gallery** (routes, page titles, link labels). The internal/backend name is **archive** (file paths, API routes, component folders, lib modules, DB identifiers). Example: the page is `/gallery` and its title is "Gallery", but the component lives in `src/components/archive/`, the API is at `/api/archive/`, and the lib module is `src/lib/archive/`.
+
 ## Coding Style & Naming
 
 TypeScript 5.9 strict mode; see `@tsconfig.json`. Path alias `@/*` maps to `src/*`. ESLint 9 + Prettier enforce style; Husky runs both pre-commit on `*.{ts,tsx,astro}`. React components: PascalCase `.tsx`. Astro pages and layouts: PascalCase `.astro`. API endpoints: server-only `.ts` in `src/pages/api/`.

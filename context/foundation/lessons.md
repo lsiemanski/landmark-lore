@@ -72,6 +72,13 @@
 - **Rule**: Always use `client:only="react"` for interactive React components that use hooks or browser APIs; never `client:load`.
 - **Applies to**: plan, implement, impl-review
 
+## Interactive elements must have cursor-pointer
+
+- **Context**: Any clickable UI element — buttons, links styled as buttons, sidebar items, icon triggers, cards with `onClick`.
+- **Problem**: Browsers render `<button>` with `cursor: default`, so interactive elements look non-clickable unless styled.
+- **Rule**: Always add `cursor-pointer` (Tailwind) to any element the user can click to trigger an action. Applies to `<button>`, `<a>`, and any `<div>`/`<span>` with an `onClick`. Do not rely on browser defaults.
+- **Applies to**: implement, impl-review
+
 ## Extract domain string identifiers to named constants
 
 - **Context**: Any phase that introduces domain-specific string identifiers in lib or API layers
