@@ -314,44 +314,44 @@ One new migration adds the `followup_usage` table and its two functions; it is a
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly
-- [x] 2.2 Type checking passes: `npm run typecheck`
-- [x] 2.3 Linting passes: `npm run lint`
-- [x] 2.4 Integration tests pass: `npm run test -- follow-up-route`
-- [x] 2.5 Test: 200 with an `answer` string for an authenticated request
-- [x] 2.6 Test: recognized request (`photoId`) persists the enriched description and returns it as `description`
-- [x] 2.7 Test: answer still returned (200) when the description-persist write fails (no refund)
-- [x] 2.8 Test: 401 unauthenticated, before consuming a quota slot
-- [x] 2.9 Test: 429 with `error`/`limit`/`used` when the cap is exhausted
-- [x] 2.10 Test: 400 when the question is missing/empty
-- [x] 2.11 Test: refund called and 502 returned on AI failure
-- [x] 2.12 Test: outbound request includes replayed history and the image
+- [x] 2.1 Migration applies cleanly — 68c6640
+- [x] 2.2 Type checking passes: `npm run typecheck` — 68c6640
+- [x] 2.3 Linting passes: `npm run lint` — 68c6640
+- [x] 2.4 Integration tests pass: `npm run test -- follow-up-route` — 68c6640
+- [x] 2.5 Test: 200 with an `answer` string for an authenticated request — 68c6640
+- [x] 2.6 Test: recognized request (`photoId`) persists the enriched description and returns it as `description` — 68c6640
+- [x] 2.7 Test: answer still returned (200) when the description-persist write fails (no refund) — 68c6640
+- [x] 2.8 Test: 401 unauthenticated, before consuming a quota slot — 68c6640
+- [x] 2.9 Test: 429 with `error`/`limit`/`used` when the cap is exhausted — 68c6640
+- [x] 2.10 Test: 400 when the question is missing/empty — 68c6640
+- [x] 2.11 Test: refund called and 502 returned on AI failure — 68c6640
+- [x] 2.12 Test: outbound request includes replayed history and the image — 68c6640
 
 #### Manual
 
-- [x] 2.13 `POST /api/follow-up` returns a coherent answer for a recognized photo
-- [x] 2.14 Exhausting the follow-up cap returns 429 without touching the image quota
-- [x] 2.15 A recognized follow-up persists the enriched description (verify the `identifications` row)
+- [x] 2.13 `POST /api/follow-up` returns a coherent answer for a recognized photo — 52340b0
+- [x] 2.14 Exhausting the follow-up cap returns 429 without touching the image quota — 52340b0
+- [x] 2.15 A recognized follow-up persists the enriched description (verify the `identifications` row) — 52340b0
 
 ### Phase 3: Inline follow-up chat UI in `UploadFlow`
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npm run typecheck`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Component tests pass: `npm run test -- FollowUpChat`
-- [x] 3.4 Test: submitting a question renders the returned answer
-- [x] 3.5 Test: a response carrying `description` fires `onDescriptionUpdate` with the enriched text
-- [x] 3.6 Test: a failed call shows inline retry and preserves prior turns
-- [x] 3.7 Test: a 429 response shows a terminal "limit reached" message with no retry
-- [x] 3.8 Test: input disabled while a call is pending
+- [x] 3.1 Type checking passes: `npm run typecheck` — 52340b0
+- [x] 3.2 Linting passes: `npm run lint` — 52340b0
+- [x] 3.3 Component tests pass: `npm run test -- FollowUpChat` — 52340b0
+- [x] 3.4 Test: submitting a question renders the returned answer — 52340b0
+- [x] 3.5 Test: a response carrying `description` fires `onDescriptionUpdate` with the enriched text — 52340b0
+- [x] 3.6 Test: a failed call shows inline retry and preserves prior turns — 52340b0
+- [x] 3.7 Test: a 429 response shows a terminal "limit reached" message with no retry — 52340b0
+- [x] 3.8 Test: input disabled while a call is pending — 52340b0
 
 #### Manual
 
-- [x] 3.9 Recognized photo: on-topic answer inline; context-dependent follow-up honours history
-- [x] 3.10 Recognized photo: the visible description updates live and persists in the archive
-- [x] 3.11 Unrecognized photo: chat answers using the image (no description persisted)
-- [x] 3.12 Off-topic question is politely deflected
-- [x] 3.13 Network failure shows inline retry without clearing the thread; retry succeeds
-- [x] 3.14 Starting a new photo clears the conversation
-- [x] 3.15 No regression in existing identify/save/discard flows
+- [x] 3.9 Recognized photo: on-topic answer inline; context-dependent follow-up honours history — 52340b0
+- [x] 3.10 Recognized photo: the visible description updates live and persists in the archive — 52340b0
+- [x] 3.11 Unrecognized photo: chat answers using the image (no description persisted) — 52340b0
+- [x] 3.12 Off-topic question is politely deflected — 52340b0
+- [x] 3.13 Network failure shows inline retry without clearing the thread; retry succeeds — 52340b0
+- [x] 3.14 Starting a new photo clears the conversation — 52340b0
+- [x] 3.15 No regression in existing identify/save/discard flows — 52340b0

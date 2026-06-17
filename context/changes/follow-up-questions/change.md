@@ -1,7 +1,7 @@
 ---
 change_id: follow-up-questions
 title: Follow-up questions
-status: impl_reviewed
+status: implemented
 created: 2026-06-17
 updated: 2026-06-17
 archived_at: null
