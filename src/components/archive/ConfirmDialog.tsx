@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useDialogFocus } from "./useDialogFocus";
 
 interface Props {
   open: boolean;
@@ -10,22 +10,14 @@ interface Props {
 }
 
 export function ConfirmDialog({ open, title, message, confirmLabel, onConfirm, onCancel }: Props) {
-  useEffect(() => {
-    if (!open) return;
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
-    }
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open, onCancel]);
+  const panelRef = useDialogFocus(open, onCancel);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

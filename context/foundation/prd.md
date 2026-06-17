@@ -32,12 +32,15 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
 ## Success Criteria
 
 ### Primary
+
 - A traveler uploads a photo, receives an identification and description of its subject, optionally asks a follow-up question, and saves the photo with its info into a folder — all in a single session.
 
 ### Secondary
+
 - Photos are automatically tagged by subject type (landmark, artwork, person) from the identification step, with no manual input from the traveler.
 
 ### Guardrails
+
 - A traveler's photos and data are never visible to other users — privacy is the floor.
 - Identification always returns a result; subjects that cannot be recognized surface an explicit "not recognized" state, never a silent failure.
 - Photo upload never corrupts or loses the original file.
@@ -51,6 +54,7 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
 - **Then** they see the subject identified with a name and description
 
 #### Acceptance Criteria
+
 - Identification returns at minimum a subject name and a substantive contextual description (not just a label)
 - An unrecognised subject surfaces an explicit "not recognised" state, never a blank
 - Traveler can save the photo + info in one action after reviewing
@@ -58,6 +62,7 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
 ## Functional Requirements
 
 ### Authentication
+
 - FR-001: Traveler can create an account with email and password. Priority: must-have
 - FR-002: Traveler can log in with email and password. Priority: must-have
   > Socrates: Counter-argument considered: "email/password without a recovery flow is a support burden." Resolution: accepted — password reset added as FR-010.
@@ -65,6 +70,7 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
   > Socrates: Added after Socrates round on FR-002; incomplete auth without recovery.
 
 ### Photo & Identification
+
 - FR-003: Traveler can upload a photo from their device. Priority: must-have
   > Socrates: Counter-argument considered: "server storage creates GDPR and image-rights compliance risk from day one." Resolution: FR stands; compliance risk recorded in Open Questions — a data retention policy and privacy commitment are needed before public launch.
 - FR-004: Traveler can receive an identification and description of the subject in an uploaded photo. Priority: must-have
@@ -73,6 +79,7 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
   > Socrates: Counter-argument considered: "limiting to one follow-up is arbitrary and will feel broken." Resolution: accepted — removed the one-question limit; traveler can ask multiple follow-up questions in a session.
 
 ### Album & Organisation
+
 - FR-006: Traveler can review, edit the identification info, and save a photo to their archive. Priority: must-have
   > Socrates: Counter-argument considered: "saving before review is risky — wrong identifications get committed." Resolution: accepted — traveler can edit or reject the identification before saving; save is always an explicit action after review.
 - FR-007: Traveler can manually move or re-organise saved photos between folders (overriding auto-organisation). Priority: must-have
@@ -81,6 +88,8 @@ An individual who has taken travel photos — landmarks, artwork, monuments, bui
   > Socrates: Counter-argument considered: "place and time may come from photo metadata (GPS/EXIF), not AI — photos without metadata will have no place/time tag." Resolution: accepted — EXIF-first strategy for place and time; AI-inferred fallback when metadata is absent. Strategy goes to Open Questions.
 - FR-009: System automatically organises saved photos into folders based on identified place and time as a suggestion the traveler can always override. Priority: nice-to-have
   > Socrates: Counter-argument considered: "auto-organisation that can't be overridden creates a system the traveler doesn't trust." Resolution: accepted — auto-org is a proposal, not a lock; traveler can always move photos via FR-007.
+- FR-011: Traveler can open a saved photo from the archive and view its full identification details — subject name and description — without leaving the archive. Priority: must-have
+  > Gap: FR-006 covers review and edit at upload time only; after saving, the description is not accessible anywhere in the archive. FR-011 closes this so the archive is actually useful as a reference, not just a photo grid.
 
 ## Non-Functional Requirements
 

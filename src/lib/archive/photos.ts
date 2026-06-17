@@ -7,6 +7,7 @@ export interface PhotoCardData {
   id: string;
   signedUrl: string;
   subjectName: string;
+  description: string;
   folderId: string;
   createdAt: string;
 }
@@ -17,7 +18,7 @@ export async function listPhotos(
 ): Promise<PhotoCardData[]> {
   let query = supabase
     .from("photos")
-    .select("id, folder_id, storage_path, created_at, identifications(subject_name)")
+    .select("id, folder_id, storage_path, created_at, identifications(subject_name, description)")
     .eq("user_id", params.userId)
     .eq("status", PHOTO_STATUS_IDENTIFIED)
     .order("created_at", { ascending: false });
@@ -41,6 +42,7 @@ export async function listPhotos(
     id: row.id,
     signedUrl: signedUrls[i]?.signedUrl ?? "",
     subjectName: row.identifications?.subject_name ?? "",
+    description: row.identifications?.description ?? "",
     folderId: row.folder_id,
     createdAt: row.created_at,
   }));

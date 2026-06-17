@@ -6,12 +6,13 @@ import type { PhotoCardData } from "@/lib/archive/photos";
 interface Props {
   photo: PhotoCardData;
   folders: FolderWithCount[];
+  onSelect: (photo: PhotoCardData) => void;
   onMoved: (photoId: string, targetFolderId: string) => void;
   onDeleted: (photoId: string) => void;
   onError: (message: string) => void;
 }
 
-export function PhotoCard({ photo, folders, onMoved, onDeleted, onError }: Props) {
+export function PhotoCard({ photo, folders, onSelect, onMoved, onDeleted, onError }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -61,14 +62,23 @@ export function PhotoCard({ photo, folders, onMoved, onDeleted, onError }: Props
     <div className="group relative rounded-xl border border-white/10 bg-white/5">
       <div className="relative aspect-square w-full overflow-hidden rounded-t-xl">
         {!loaded && <div className="absolute inset-0 animate-pulse bg-white/10" />}
-        <img
-          src={photo.signedUrl}
-          alt={photo.subjectName}
-          onLoad={() => {
-            setLoaded(true);
+        <button
+          type="button"
+          onClick={() => {
+            onSelect(photo);
           }}
-          className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
-        />
+          aria-label={`View details for ${photo.subjectName}`}
+          className="h-full w-full cursor-pointer"
+        >
+          <img
+            src={photo.signedUrl}
+            alt={photo.subjectName}
+            onLoad={() => {
+              setLoaded(true);
+            }}
+            className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+          />
+        </button>
       </div>
       <div className="flex items-start justify-between p-2">
         <div className="min-w-0">

@@ -85,3 +85,10 @@
 - **Problem**: The same literal appears in routes, lib, and tests — a rename requires grep-and-replace across all layers, and the test mock silently returns undefined for the missing export
 - **Rule**: Domain-specific magic strings should be extracted to a named constant in their canonical lib module; all routes, helpers, and tests import from there.
 - **Applies to**: implement, impl-review
+
+## aria-modal requires real focus management
+
+- **Context**: Any modal/dialog component (`src/components/**`) that sets `role="dialog"` + `aria-modal="true"` — e.g. PhotoDetailModal, ConfirmDialog.
+- **Problem**: The panel asserts `aria-modal="true"` but focus is never moved into the dialog on open, not trapped while open, and not restored to the trigger on close — so a keyboard user can Tab onto the page behind it. The attribute promises behavior the markup doesn't deliver.
+- **Rule**: A component that declares `aria-modal="true"` must also manage focus: move focus into the dialog on open (e.g. the close button), trap Tab within it while open, and restore focus to the triggering element on close.
+- **Applies to**: plan, implement, impl-review

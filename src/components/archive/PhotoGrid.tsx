@@ -5,12 +5,13 @@ import { PhotoCard } from "./PhotoCard";
 interface Props {
   photos: PhotoCardData[];
   folders: FolderWithCount[];
+  onSelect: (photo: PhotoCardData) => void;
   onMoved: (photoId: string, targetFolderId: string) => void;
   onDeleted: (photoId: string) => void;
   onError: (message: string) => void;
 }
 
-export function PhotoGrid({ photos, folders, onMoved, onDeleted, onError }: Props) {
+export function PhotoGrid({ photos, folders, onSelect, onMoved, onDeleted, onError }: Props) {
   if (photos.length === 0) {
     return <p className="text-sm text-white/40">No photos yet — identify a landmark to get started.</p>;
   }
@@ -22,6 +23,7 @@ export function PhotoGrid({ photos, folders, onMoved, onDeleted, onError }: Prop
           key={photo.id}
           photo={photo}
           folders={folders}
+          onSelect={onSelect}
           onMoved={onMoved}
           onDeleted={onDeleted}
           onError={onError}

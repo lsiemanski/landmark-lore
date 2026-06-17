@@ -6,6 +6,8 @@ import type { PhotoCardData } from "@/lib/archive/photos";
 import { FolderSidebar } from "./FolderSidebar";
 import { PhotoGrid } from "./PhotoGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ErrorBanner } from "./ErrorBanner";
+import { PhotoDetailModal } from "./PhotoDetailModal";
 
 export const ALL = "all";
 export type SelectedFolder = string; // ALL ("all") or a folderId
@@ -19,6 +21,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const [folders, setFolders] = useState<FolderWithCount[]>(initialFolders);
   const [allPhotos, setAllPhotos] = useState<PhotoCardData[]>(initialPhotos);
   const [selectedFolder, setSelectedFolder] = useState<SelectedFolder>(ALL);
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoCardData | null>(null);
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string | null>(null);
   const [pendingDeletePhoto, setPendingDeletePhoto] = useState<string | null>(null);
   const [folderRenaming, setFolderRenaming] = useState(false);
@@ -126,24 +129,12 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
 
   return (
     <>
-      {error && (
-        <div
-          role="alert"
-          className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-200"
-        >
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-            }}
-            aria-label="Dismiss error"
-            className="cursor-pointer rounded px-1 text-red-200/60 transition-colors hover:text-red-200"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner
+        message={error ?? ""}
+        onDismiss={() => {
+          setError(null);
+        }}
+      />
       <div className="flex gap-6">
         <FolderSidebar
           folders={folders}
@@ -212,6 +203,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
           <PhotoGrid
             photos={photos}
             folders={folders}
+            onSelect={setSelectedPhoto}
             onMoved={onPhotoMoved}
             onDeleted={setPendingDeletePhoto}
             onError={setError}
@@ -242,6 +234,13 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
         }}
         onCancel={() => {
           setPendingDeletePhoto(null);
+        }}
+      />
+
+      <PhotoDetailModal
+        photo={selectedPhoto}
+        onClose={() => {
+          setSelectedPhoto(null);
         }}
       />
     </>
