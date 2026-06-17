@@ -3,7 +3,7 @@ project: Landmark Lore
 version: 1
 status: draft
 created: 2026-06-01
-updated: 2026-06-14
+updated: 2026-06-17
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -34,7 +34,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 | F-03 | testing-harness-bootstrap     | (foundation) Vitest runner configured; identification-contract integration tests pass | —                | —                             | done   |
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done   |
 | S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | ready  |
-| S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | ready  |
+| S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | done   |
 | S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | done   |
 
 ## Streams
@@ -138,7 +138,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Folder move logic depends on the schema designed in F-01; if the folders table does not model the structure needed for FR-007, a schema migration is required before this slice can ship.
-- **Status:** ready
+- **Status:** done
 
 ### S-04: Account lifecycle complete
 
@@ -190,3 +190,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-03: (foundation) Vitest runner configured; identification-contract integration tests pass** — Archived 2026-06-12 → `context/archive/2026-06-12-testing-harness-bootstrap/`. Lesson: —.
 - **S-01: upload a photo, receive identification, and save it to the archive** — Implemented 2026-06-14. Change ID: `first-identification-and-save`. Unlocks S-02, S-03.
 - **S-04: user can create an account, sign in, and reset their password via email** — Archived 2026-06-14 → `context/archive/2026-06-14-account-lifecycle/`. Lesson: —.
+- **S-03: user can view their saved photos in a personal archive and manually move photos between folders** — Archived 2026-06-17 → `context/archive/2026-06-14-archive-and-folders/`. Lesson: —.
