@@ -17,7 +17,7 @@ export function PhotoGrid({ photos, folders, onSelect, onMoved, onDeleted, onErr
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {photos.map((photo) => (
         <PhotoCard
           key={photo.id}
