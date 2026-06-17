@@ -185,15 +185,15 @@ Fetch `description` from the DB, build `PhotoDetailModal`, make the card image c
 
 #### Automated
 
-- [x] 1.1 TypeScript compiles with no errors: `npm run typecheck`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Build succeeds: `npm run build`
+- [x] 1.1 TypeScript compiles with no errors: `npm run typecheck` — c5ee0a1
+- [x] 1.2 Lint passes: `npm run lint` — c5ee0a1
+- [x] 1.3 Build succeeds: `npm run build` — c5ee0a1
 
 #### Manual
 
-- [x] 1.4 Clicking a photo card thumbnail opens the modal with the correct photo, subject name, and description
-- [x] 1.5 Escape, backdrop click, and close button all close the modal
-- [x] 1.6 Clicking inside the panel does not close the modal
-- [x] 1.7 Kebab menu interactions do not open the modal
-- [x] 1.8 Move, delete, folder rename, and folder delete still work (no regressions)
-- [x] 1.9 Description is read-only; `aria-modal` and `role="dialog"` present in DevTools
+- [x] 1.4 Clicking a photo card thumbnail opens the modal with the correct photo, subject name, and description — c5ee0a1
+- [x] 1.5 Escape, backdrop click, and close button all close the modal — c5ee0a1
+- [x] 1.6 Clicking inside the panel does not close the modal — c5ee0a1
+- [x] 1.7 Kebab menu interactions do not open the modal — c5ee0a1
+- [x] 1.8 Move, delete, folder rename, and folder delete still work (no regressions) — c5ee0a1
+- [x] 1.9 Description is read-only; `aria-modal` and `role="dialog"` present in DevTools — c5ee0a1
