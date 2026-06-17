@@ -163,6 +163,12 @@ Add a separate daily follow-up counter (table + RPCs mirroring `image_usage`) an
 
 **Contract**: `export const POST = apiRoute(async (context) => { ... })`. Order: `requireApiKey()` → `requireSupabaseClient()` → `requireAuthenticatedUser()` → `consumeFollowUpSlot()` → parse → `answerFollowUp()` → (if `photoId` present) `updateIdentificationDescription()` wrapped in best-effort try/catch (log + swallow; never throw over a good answer, never refund) → `Response.json({ answer, description })` (omit `description` when no `photoId`). Note: `requireApiKey()` is currently a **private** function in [identify.ts:73-76](src/pages/api/identify.ts#L73-L76), not exported — extract it to a shared module (e.g. [`auth.ts`](src/lib/api/auth.ts) or [`http.ts`](src/lib/api/http.ts)) and import it into both routes rather than duplicating it. On any thrown error after consuming **but before/through the AI call**, `refundFollowUpSlot()` (best-effort) then rethrow `HttpError` as-is or wrap provider errors as `HttpError(502, { error: "AI provider error" })`. The description-persistence failure is explicitly **outside** this refund path. Mirror the structure of [`api/identify.ts`](src/pages/api/identify.ts).
 
+#### 7. Middleware getUser hardening (addendum)
+
+**File**: `src/middleware.ts`
+
+**Intent**: Wrap `supabase.auth.getUser()` in a `try/catch` so a stale/invalid refresh token resolves to `context.locals.user = null` instead of throwing during page render (which would otherwise 500 the route). Added during Phase 2 implementation as a defensive hardening discovered while wiring the authenticated follow-up flow; documented here per impl-review F3 (2026-06-17).
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -294,32 +300,32 @@ One new migration adds the `followup_usage` table and its two functions; it is a
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run typecheck`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Unit tests pass: `npm run test -- follow-up`
-- [x] 1.4 Unit test: resolves with `{ answer, enrichedDescription }` for a normal completion
-- [x] 1.5 Unit test: replays history in the request body
-- [x] 1.6 Unit test: throws "Empty response from AI provider" on null content
-- [x] 1.7 Unit test: throws "Malformed AI response" on valid JSON missing fields
-- [x] 1.8 Unit test: retries with `json_object` on a 400 (exactly 2 calls)
-- [x] 1.9 Unit test: rejects with `OpenAI.APIError` on a non-400 provider error
+- [x] 1.1 Type checking passes: `npm run typecheck` — feccca9
+- [x] 1.2 Linting passes: `npm run lint` — feccca9
+- [x] 1.3 Unit tests pass: `npm run test -- follow-up` — feccca9
+- [x] 1.4 Unit test: resolves with `{ answer, enrichedDescription }` for a normal completion — feccca9
+- [x] 1.5 Unit test: replays history in the request body — feccca9
+- [x] 1.6 Unit test: throws "Empty response from AI provider" on null content — feccca9
+- [x] 1.7 Unit test: throws "Malformed AI response" on valid JSON missing fields — feccca9
+- [x] 1.8 Unit test: retries with `json_object` on a 400 (exactly 2 calls) — feccca9
+- [x] 1.9 Unit test: rejects with `OpenAI.APIError` on a non-400 provider error — feccca9
 
 ### Phase 2: Follow-up quota + `/api/follow-up` route
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly
-- [ ] 2.2 Type checking passes: `npm run typecheck`
-- [ ] 2.3 Linting passes: `npm run lint`
-- [ ] 2.4 Integration tests pass: `npm run test -- follow-up-route`
-- [ ] 2.5 Test: 200 with an `answer` string for an authenticated request
-- [ ] 2.6 Test: recognized request (`photoId`) persists the enriched description and returns it as `description`
-- [ ] 2.7 Test: answer still returned (200) when the description-persist write fails (no refund)
-- [ ] 2.8 Test: 401 unauthenticated, before consuming a quota slot
-- [ ] 2.9 Test: 429 with `error`/`limit`/`used` when the cap is exhausted
-- [ ] 2.10 Test: 400 when the question is missing/empty
-- [ ] 2.11 Test: refund called and 502 returned on AI failure
-- [ ] 2.12 Test: outbound request includes replayed history and the image
+- [x] 2.1 Migration applies cleanly
+- [x] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.4 Integration tests pass: `npm run test -- follow-up-route`
+- [x] 2.5 Test: 200 with an `answer` string for an authenticated request
+- [x] 2.6 Test: recognized request (`photoId`) persists the enriched description and returns it as `description`
+- [x] 2.7 Test: answer still returned (200) when the description-persist write fails (no refund)
+- [x] 2.8 Test: 401 unauthenticated, before consuming a quota slot
+- [x] 2.9 Test: 429 with `error`/`limit`/`used` when the cap is exhausted
+- [x] 2.10 Test: 400 when the question is missing/empty
+- [x] 2.11 Test: refund called and 502 returned on AI failure
+- [x] 2.12 Test: outbound request includes replayed history and the image
 
 #### Manual
 

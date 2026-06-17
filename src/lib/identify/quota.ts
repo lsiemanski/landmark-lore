@@ -25,3 +25,23 @@ export async function refundSlot(supabase: SupabaseClient, period: string): Prom
   // Best-effort: a failed refund only costs the user one slot.
   await supabase.rpc("refund_image_usage", { p_period: period });
 }
+
+export async function consumeFollowUpSlot(supabase: SupabaseClient, period: string): Promise<void> {
+  const { data: consumed, error } = await supabase.rpc("try_consume_followup_usage", {
+    p_period: period,
+    p_limit: IDENTIFY_CONFIG.followUpDailyLimit,
+  });
+  if (error) throw new HttpError(503, { error: "Usage check failed" });
+  if (!consumed.allowed) {
+    throw new HttpError(429, {
+      error: "Daily limit reached",
+      limit: IDENTIFY_CONFIG.followUpDailyLimit,
+      used: consumed.used,
+    });
+  }
+}
+
+export async function refundFollowUpSlot(supabase: SupabaseClient, period: string): Promise<void> {
+  // Best-effort: a failed refund only costs the user one slot.
+  await supabase.rpc("refund_followup_usage", { p_period: period });
+}

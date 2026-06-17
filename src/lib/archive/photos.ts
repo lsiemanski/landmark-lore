@@ -90,3 +90,19 @@ export async function deletePhotoFromStorage(supabase: SupabaseClient, storagePa
   const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
   if (error) throw new HttpError(502, { error: "Failed to delete photo from storage" });
 }
+
+export async function updateIdentificationDescription(
+  supabase: SupabaseClient,
+  params: { userId: string; photoId: string; description: string },
+): Promise<void> {
+  // Ownership is enforced by the identifications `owner_all` RLS policy
+  // (gates by photos.user_id); count detects a non-owned/missing row,
+  // mirroring movePhoto's not-found signal.
+  const { count, error } = await supabase
+    .from("identifications")
+    .update({ description: params.description }, { count: "exact" })
+    .eq("photo_id", params.photoId);
+
+  if (error) throw new HttpError(500, { error: "Failed to update description" });
+  if (!count) throw new HttpError(404, { error: "Identification not found" });
+}

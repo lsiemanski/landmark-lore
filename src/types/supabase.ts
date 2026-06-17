@@ -44,6 +44,24 @@ export interface Database {
         };
         Relationships: [];
       };
+      followup_usage: {
+        Row: {
+          count: number;
+          period: string;
+          user_id: string;
+        };
+        Insert: {
+          count?: number;
+          period: string;
+          user_id: string;
+        };
+        Update: {
+          count?: number;
+          period?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       image_usage: {
         Row: {
           count: number;
@@ -150,6 +168,22 @@ export interface Database {
     };
     Views: Record<never, never>;
     Functions: {
+      try_consume_followup_usage: {
+        Args: {
+          p_period: string;
+          p_limit: number;
+        };
+        Returns: {
+          allowed: boolean;
+          used: number;
+        };
+      };
+      refund_followup_usage: {
+        Args: {
+          p_period: string;
+        };
+        Returns: number;
+      };
       try_consume_image_usage: {
         Args: {
           p_period: string;

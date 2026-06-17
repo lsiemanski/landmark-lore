@@ -3,3 +3,4 @@ export const SUPABASE_URL = undefined;
 export const SUPABASE_KEY = undefined;
 export const IDENTIFY_MODEL = undefined;
 export const IDENTIFY_DAILY_LIMIT = undefined;
+export const FOLLOWUP_DAILY_LIMIT = undefined;

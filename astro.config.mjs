@@ -29,6 +29,7 @@ export default defineConfig({
       // src/lib/ai/config.ts supplies defaults when unset.
       IDENTIFY_MODEL: envField.string({ context: "server", access: "secret", optional: true }),
       IDENTIFY_DAILY_LIMIT: envField.number({ context: "server", access: "secret", optional: true }),
+      FOLLOWUP_DAILY_LIMIT: envField.number({ context: "server", access: "secret", optional: true }),
     },
   },
 });

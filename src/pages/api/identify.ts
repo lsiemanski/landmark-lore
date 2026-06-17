@@ -1,9 +1,8 @@
 import type { APIRoute } from "astro";
-import { OPENROUTER_API_KEY } from "astro:env/server";
 import type { SupabaseClient } from "@/lib/supabase";
 import { identifyImage } from "@/lib/ai/identification";
 import { apiRoute, HttpError } from "@/lib/api/http";
-import { requireSupabaseClient, requireAuthenticatedUser } from "@/lib/api/auth";
+import { requireApiKey, requireSupabaseClient, requireAuthenticatedUser } from "@/lib/api/auth";
 import { currentPeriod, consumeSlot, refundSlot } from "@/lib/identify/quota";
 import { parseUploadRequest, encodeForAI, hashPhoto } from "@/lib/identify/upload";
 import { checkIdempotencyCache, lookupDefaultFolder, persistPhotoAndIdentification } from "@/lib/identify/persistence";
@@ -66,11 +65,4 @@ async function identify(
     if (err instanceof HttpError) throw err;
     throw new HttpError(502, { error: "AI provider error" });
   }
-}
-
-// --- Request pipeline ---------------------------------------------------------
-
-function requireApiKey(): string {
-  if (!OPENROUTER_API_KEY) throw new HttpError(503, { error: "AI provider not configured" });
-  return OPENROUTER_API_KEY;
 }

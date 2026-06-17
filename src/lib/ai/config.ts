@@ -1,4 +1,4 @@
-import { IDENTIFY_MODEL, IDENTIFY_DAILY_LIMIT } from "astro:env/server";
+import { IDENTIFY_MODEL, IDENTIFY_DAILY_LIMIT, FOLLOWUP_DAILY_LIMIT } from "astro:env/server";
 import { MODELS } from "./models";
 import { ALLOWED_IMAGE_TYPES } from "@/lib/media-types";
 
@@ -18,6 +18,8 @@ export const IDENTIFY_CONFIG = {
   model: IDENTIFY_MODEL ?? MODELS.paid,
   /** Per-user daily image-identification cap. Override with IDENTIFY_DAILY_LIMIT. */
   dailyImageLimit: IDENTIFY_DAILY_LIMIT ?? 100,
+  /** Per-user daily follow-up cap. Override with FOLLOWUP_DAILY_LIMIT. */
+  followUpDailyLimit: FOLLOWUP_DAILY_LIMIT ?? 200,
   /** Max tokens requested per identification completion. */
   maxTokens: 1024,
   /** Max tokens per follow-up completion — carries both the answer and a full description rewrite. */
