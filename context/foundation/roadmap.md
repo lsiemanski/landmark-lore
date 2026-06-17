@@ -33,7 +33,7 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 | F-02 | ai-provider-spike             | (foundation) AI provider chosen, key configured, test identification call verified    | —                | FR-004, FR-005                | done   |
 | F-03 | testing-harness-bootstrap     | (foundation) Vitest runner configured; identification-contract integration tests pass | —                | —                             | done   |
 | S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done   |
-| S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | ready  |
+| S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | done   |
 | S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | done   |
 | S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | done   |
 
@@ -126,7 +126,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:** —
 - **Decisions made:** In-browser only (React state, not DB); same screen as the identification result; works for both identified and unrecognized photos; stateless per-question calls (no session context retained). Resolved 2026-06-11.
 - **Risk:** Stateless implementation ships fastest but reduces answer quality when follow-ups reference earlier context in the session; acceptable for v1.
-- **Status:** ready
+- **Status:** done
 
 ### S-03: Archive view and folder management
 
@@ -191,3 +191,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: upload a photo, receive identification, and save it to the archive** — Implemented 2026-06-14. Change ID: `first-identification-and-save`. Unlocks S-02, S-03.
 - **S-04: user can create an account, sign in, and reset their password via email** — Archived 2026-06-14 → `context/archive/2026-06-14-account-lifecycle/`. Lesson: —.
 - **S-03: user can view their saved photos in a personal archive and manually move photos between folders** — Archived 2026-06-17 → `context/archive/2026-06-14-archive-and-folders/`. Lesson: —.
+- **S-02: user can ask follow-up questions about an identified subject in the same session and receive answers** — Archived 2026-06-17 → `context/archive/2026-06-17-follow-up-questions/`. Lesson: —.

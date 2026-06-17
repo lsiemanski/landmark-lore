@@ -1,10 +1,10 @@
 ---
 change_id: follow-up-questions
 title: Follow-up questions
-status: implemented
+status: archived
 created: 2026-06-17
 updated: 2026-06-17
-archived_at: null
+archived_at: 2026-06-17T14:16:49Z
 ---
 
 ## Notes
