@@ -1,10 +1,10 @@
 ---
 change_id: photo-detail-view
 title: Photo detail view
-status: implemented
+status: archived
 created: 2026-06-17
 updated: 2026-06-17
-archived_at: null
+archived_at: 2026-06-17T18:50:31Z
 ---
 
 ## Notes

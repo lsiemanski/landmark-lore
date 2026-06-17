@@ -27,16 +27,16 @@ A traveler returns from a trip with photos of landmarks, statues, and art — an
 
 ## At a glance
 
-| ID   | Change ID                     | Outcome (user can …)                                                                  | Prerequisites    | PRD refs                      | Status      |
-| ---- | ----------------------------- | ------------------------------------------------------------------------------------- | ---------------- | ----------------------------- | ----------- |
-| F-01 | data-schema                   | (foundation) photos, folders, and identifications tables exist in Supabase            | —                | FR-003, FR-006, FR-007        | done        |
-| F-02 | ai-provider-spike             | (foundation) AI provider chosen, key configured, test identification call verified    | —                | FR-004, FR-005                | done        |
-| F-03 | testing-harness-bootstrap     | (foundation) Vitest runner configured; identification-contract integration tests pass | —                | —                             | done        |
-| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done        |
-| S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | done        |
-| S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | done        |
-| S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | done        |
-| S-05 | photo-detail-view             | open a saved photo from the archive and read its full subject name and description    | S-03             | FR-011                        | in progress |
+| ID   | Change ID                     | Outcome (user can …)                                                                  | Prerequisites    | PRD refs                      | Status |
+| ---- | ----------------------------- | ------------------------------------------------------------------------------------- | ---------------- | ----------------------------- | ------ |
+| F-01 | data-schema                   | (foundation) photos, folders, and identifications tables exist in Supabase            | —                | FR-003, FR-006, FR-007        | done   |
+| F-02 | ai-provider-spike             | (foundation) AI provider chosen, key configured, test identification call verified    | —                | FR-004, FR-005                | done   |
+| F-03 | testing-harness-bootstrap     | (foundation) Vitest runner configured; identification-contract integration tests pass | —                | —                             | done   |
+| S-01 | first-identification-and-save | upload a photo, receive a subject name and description, and save it                   | F-01, F-02, F-03 | FR-003, FR-004, FR-006, US-01 | done   |
+| S-02 | follow-up-questions           | ask follow-up questions about an identified photo and receive answers                 | S-01             | FR-005                        | done   |
+| S-03 | archive-and-folders           | view their archive and manually move photos between folders                           | S-01             | FR-007                        | done   |
+| S-04 | account-lifecycle             | create an account, sign in, and reset their password via email                        | —                | FR-001, FR-002, FR-010        | done   |
+| S-05 | photo-detail-view             | open a saved photo from the archive and read its full subject name and description    | S-03             | FR-011                        | done   |
 
 ## Streams
 
@@ -151,7 +151,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Low — data is already persisted in the `identifications` table; this slice is primarily a UI addition with a read-only data fetch.
-- **Status:** in progress
+- **Status:** done
 
 ### S-04: Account lifecycle complete
 
@@ -206,3 +206,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-04: user can create an account, sign in, and reset their password via email** — Archived 2026-06-14 → `context/archive/2026-06-14-account-lifecycle/`. Lesson: —.
 - **S-03: user can view their saved photos in a personal archive and manually move photos between folders** — Archived 2026-06-17 → `context/archive/2026-06-14-archive-and-folders/`. Lesson: —.
 - **S-02: user can ask follow-up questions about an identified subject in the same session and receive answers** — Archived 2026-06-17 → `context/archive/2026-06-17-follow-up-questions/`. Lesson: —.
+- **S-05: user can open a saved photo from the archive and view its full identification details — subject name and description — without leaving the archive.** — Archived 2026-06-17 → `context/archive/2026-06-17-photo-detail-view/`. Lesson: —.
