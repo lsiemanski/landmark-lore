@@ -20,6 +20,8 @@ export const IDENTIFY_CONFIG = {
   dailyImageLimit: IDENTIFY_DAILY_LIMIT ?? 100,
   /** Max tokens requested per identification completion. */
   maxTokens: 1024,
+  /** Max tokens per follow-up completion — carries both the answer and a full description rewrite. */
+  followUpMaxTokens: 2048,
   /** Max accepted upload size in bytes (after client-side downscale). */
   maxBytes: 5 * 1024 * 1024,
   /** Accepted upload media types. */

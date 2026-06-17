@@ -23,9 +23,18 @@ export async function identifyImage(base64: string, apiKey: string): Promise<Ide
 
   const content = response.choices[0].message.content;
   if (!content) throw new Error("Empty response from AI provider");
-  const parsed = IdentificationResultSchema.safeParse(JSON.parse(content));
+  const parsed = IdentificationResultSchema.safeParse(parseJson(content));
   if (!parsed.success) throw new Error("Malformed AI response");
   return parsed.data;
+}
+
+/** Parse JSON, mapping non-JSON content to the same "Malformed AI response" guard. */
+function parseJson(content: string): unknown {
+  try {
+    return JSON.parse(content);
+  } catch {
+    throw new Error("Malformed AI response");
+  }
 }
 
 async function requestIdentification(client: OpenAI, base64: string): Promise<OpenAI.Chat.ChatCompletion> {
