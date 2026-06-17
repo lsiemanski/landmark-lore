@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IdentificationResult } from "@/components/identify/IdentificationResult";
 import FolderPicker from "@/components/identify/FolderPicker";
+import FollowUpChat from "@/components/identify/FollowUpChat";
 import type { IdentificationResult as IdentificationResultData } from "@/lib/ai/identification";
 import type { FolderWithCount } from "@/lib/archive/folders";
 
@@ -10,6 +11,7 @@ interface IdentifiedState {
   previewUrl: string;
   result: IdentificationResultData;
   photoId: string;
+  imageBlob: Blob;
 }
 interface SavedState {
   status: "saved";
@@ -27,6 +29,7 @@ interface Props {
   onDiscard: () => void;
   onFolderChange: (id: string) => void;
   onReset: () => void;
+  onDescriptionUpdate: (description: string) => void;
 }
 
 export default function PostIdentifyPanel({
@@ -39,6 +42,7 @@ export default function PostIdentifyPanel({
   onDiscard,
   onFolderChange,
   onReset,
+  onDescriptionUpdate,
 }: Props) {
   if (flowState.status === "saved") {
     return (
@@ -75,6 +79,12 @@ export default function PostIdentifyPanel({
         className="mx-auto block w-full max-w-sm rounded-xl object-contain"
       />
       <IdentificationResult title={flowState.result.subjectName} description={flowState.result.description} />
+      <FollowUpChat
+        imageBlob={flowState.imageBlob}
+        anchor={{ subjectName: flowState.result.subjectName, description: flowState.result.description }}
+        photoId={flowState.photoId}
+        onDescriptionUpdate={onDescriptionUpdate}
+      />
       {folders && (
         <FolderPicker folders={folders} selectedFolderId={selectedFolderId} onChange={onFolderChange} disabled={busy} />
       )}

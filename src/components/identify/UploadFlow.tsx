@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
 import { downscale } from "@/lib/client/downscale";
-import { ACCEPT_IMAGE_TYPES } from "@/lib/media-types";
 import { Button } from "@/components/ui/button";
-import { IdentificationResult } from "@/components/identify/IdentificationResult";
+import IdleUploader from "@/components/identify/IdleUploader";
 import PostIdentifyPanel from "@/components/identify/PostIdentifyPanel";
+import UnrecognizedPanel from "@/components/identify/UnrecognizedPanel";
 import type { IdentificationResult as IdentificationResultData } from "@/lib/ai/identification";
 import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 import type { FolderWithCount } from "@/lib/archive/folders";
@@ -12,8 +11,8 @@ import type { FolderWithCount } from "@/lib/archive/folders";
 type FlowState =
   | { status: "idle" }
   | { status: "working"; previewUrl: string }
-  | { status: "identified"; previewUrl: string; result: IdentificationResultData; photoId: string }
-  | { status: "unrecognized"; previewUrl: string; result: IdentificationResultData }
+  | { status: "identified"; previewUrl: string; result: IdentificationResultData; photoId: string; imageBlob: Blob }
+  | { status: "unrecognized"; previewUrl: string; result: IdentificationResultData; imageBlob: Blob }
   | { status: "saved"; subjectName: string; folderName: string }
   | { status: "error"; kind: "quota"; limit: number; used: number }
   | { status: "error"; kind: "general"; message: string };
@@ -85,9 +84,20 @@ export default function UploadFlow() {
         return;
       }
       if (json.photoId && json.result) {
-        setFlowState({ status: "identified", previewUrl: url, result: json.result, photoId: json.photoId });
+        setFlowState({
+          status: "identified",
+          previewUrl: url,
+          result: json.result,
+          photoId: json.photoId,
+          imageBlob: downsized,
+        });
       } else if (json.result) {
-        setFlowState({ status: "unrecognized", previewUrl: url, result: json.result });
+        setFlowState({
+          status: "unrecognized",
+          previewUrl: url,
+          result: json.result,
+          imageBlob: downsized,
+        });
       } else {
         setFlowState({ status: "error", kind: "general", message: "Unexpected response from server" });
       }
@@ -139,33 +149,22 @@ export default function UploadFlow() {
     }
   }
 
+  function handleDescriptionUpdate(description: string) {
+    setFlowState((prev) =>
+      prev.status === "identified" ? { ...prev, result: { ...prev.result, description } } : prev,
+    );
+  }
+
   if (flowState.status === "idle") {
     return (
-      <div className="space-y-4">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-gray-300">Choose a photo</span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPT_IMAGE_TYPES}
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-            }}
-            className="block w-full cursor-pointer rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white file:mr-3 file:rounded file:border-0 file:bg-white/20 file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-white/30"
-          />
-        </label>
-        <Button
-          type="button"
-          disabled={!file}
-          onClick={() => {
-            void handleIdentify();
-          }}
-          className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Sparkles className="size-4" />
-          Identify
-        </Button>
-      </div>
+      <IdleUploader
+        fileInputRef={fileInputRef}
+        hasFile={!!file}
+        onFileChange={setFile}
+        onIdentify={() => {
+          void handleIdentify();
+        }}
+      />
     );
   }
 
@@ -190,27 +189,19 @@ export default function UploadFlow() {
         onDiscard={handleDiscard}
         onFolderChange={setSelectedFolderId}
         onReset={resetToIdle}
+        onDescriptionUpdate={handleDescriptionUpdate}
       />
     );
   }
 
   if (flowState.status === "unrecognized") {
     return (
-      <div className="space-y-6">
-        <img
-          src={flowState.previewUrl}
-          alt="Unidentified photo"
-          className="mx-auto block w-full max-w-sm rounded-xl object-contain"
-        />
-        <IdentificationResult title="Couldn't identify this photo" description={flowState.result.description} />
-        <Button
-          type="button"
-          onClick={resetToIdle}
-          className="w-full cursor-pointer rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
-        >
-          Try another photo
-        </Button>
-      </div>
+      <UnrecognizedPanel
+        previewUrl={flowState.previewUrl}
+        result={flowState.result}
+        imageBlob={flowState.imageBlob}
+        onReset={resetToIdle}
+      />
     );
   }
 

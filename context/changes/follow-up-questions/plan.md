@@ -329,29 +329,29 @@ One new migration adds the `followup_usage` table and its two functions; it is a
 
 #### Manual
 
-- [ ] 2.13 `POST /api/follow-up` returns a coherent answer for a recognized photo
-- [ ] 2.14 Exhausting the follow-up cap returns 429 without touching the image quota
-- [ ] 2.15 A recognized follow-up persists the enriched description (verify the `identifications` row)
+- [x] 2.13 `POST /api/follow-up` returns a coherent answer for a recognized photo
+- [x] 2.14 Exhausting the follow-up cap returns 429 without touching the image quota
+- [x] 2.15 A recognized follow-up persists the enriched description (verify the `identifications` row)
 
 ### Phase 3: Inline follow-up chat UI in `UploadFlow`
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run typecheck`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Component tests pass: `npm run test -- FollowUpChat`
-- [ ] 3.4 Test: submitting a question renders the returned answer
-- [ ] 3.5 Test: a response carrying `description` fires `onDescriptionUpdate` with the enriched text
-- [ ] 3.6 Test: a failed call shows inline retry and preserves prior turns
-- [ ] 3.7 Test: a 429 response shows a terminal "limit reached" message with no retry
-- [ ] 3.8 Test: input disabled while a call is pending
+- [x] 3.1 Type checking passes: `npm run typecheck`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Component tests pass: `npm run test -- FollowUpChat`
+- [x] 3.4 Test: submitting a question renders the returned answer
+- [x] 3.5 Test: a response carrying `description` fires `onDescriptionUpdate` with the enriched text
+- [x] 3.6 Test: a failed call shows inline retry and preserves prior turns
+- [x] 3.7 Test: a 429 response shows a terminal "limit reached" message with no retry
+- [x] 3.8 Test: input disabled while a call is pending
 
 #### Manual
 
-- [ ] 3.9 Recognized photo: on-topic answer inline; context-dependent follow-up honours history
-- [ ] 3.10 Recognized photo: the visible description updates live and persists in the archive
-- [ ] 3.11 Unrecognized photo: chat answers using the image (no description persisted)
-- [ ] 3.12 Off-topic question is politely deflected
-- [ ] 3.13 Network failure shows inline retry without clearing the thread; retry succeeds
-- [ ] 3.14 Starting a new photo clears the conversation
-- [ ] 3.15 No regression in existing identify/save/discard flows
+- [x] 3.9 Recognized photo: on-topic answer inline; context-dependent follow-up honours history
+- [x] 3.10 Recognized photo: the visible description updates live and persists in the archive
+- [x] 3.11 Unrecognized photo: chat answers using the image (no description persisted)
+- [x] 3.12 Off-topic question is politely deflected
+- [x] 3.13 Network failure shows inline retry without clearing the thread; retry succeeds
+- [x] 3.14 Starting a new photo clears the conversation
+- [x] 3.15 No regression in existing identify/save/discard flows
