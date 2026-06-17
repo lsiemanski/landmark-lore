@@ -20,8 +20,11 @@ describe("computeTargetDimensions", () => {
   });
 
   it("rounds fractional scaled dimensions to integers", () => {
-    // long edge 3000 → scale 2048/3000; 2000 * scale = 1365.33 → 1365
-    expect(computeTargetDimensions(3000, 2000)).toEqual({ width: 2048, height: 1365 });
+    // long edge 3000 → scale MAX_EDGE/3000; short edge 2000 * scale, rounded
+    expect(computeTargetDimensions(3000, 2000)).toEqual({
+      width: MAX_EDGE,
+      height: Math.round((2000 * MAX_EDGE) / 3000),
+    });
   });
 
   it("honors a caller-supplied maxEdge", () => {

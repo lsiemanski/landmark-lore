@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { downscale } from "@/lib/client/downscale";
+import { downscaleWithThumbnail } from "@/lib/client/downscale";
 import { Button } from "@/components/ui/button";
 import IdleUploader from "@/components/identify/IdleUploader";
 import PostIdentifyPanel from "@/components/identify/PostIdentifyPanel";
@@ -61,11 +61,12 @@ export default function UploadFlow() {
     inFlight.current = true;
     try {
       const requestId = crypto.randomUUID();
-      const downsized = await downscale(file);
+      const { image: downsized, thumbnail } = await downscaleWithThumbnail(file);
       const url = URL.createObjectURL(downsized);
       setFlowState({ status: "working", previewUrl: url });
       const form = new FormData();
       form.append("photo", downsized, "photo.jpg");
+      form.append("thumbnail", thumbnail, "thumbnail.jpg");
       form.append("request_id", requestId);
       const res = await fetch("/api/identify", { method: "POST", body: form });
       const json = (await res.json()) as {

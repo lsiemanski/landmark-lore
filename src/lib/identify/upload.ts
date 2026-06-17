@@ -3,7 +3,9 @@ import { HttpError } from "@/lib/api/http";
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function parseUploadRequest(request: Request): Promise<{ photo: File; requestId: string }> {
+export async function parseUploadRequest(
+  request: Request,
+): Promise<{ photo: File; thumbnail: File | null; requestId: string }> {
   const form = await request.formData();
   const photo = form.get("photo");
   if (!(photo instanceof File)) throw new HttpError(415, { error: "Unsupported media type" });
@@ -12,12 +14,17 @@ export async function parseUploadRequest(request: Request): Promise<{ photo: Fil
   }
   if (photo.size > IDENTIFY_CONFIG.maxBytes) throw new HttpError(413, { error: "File too large" });
 
+  // Client-generated gallery thumbnail (optional — old/foreign clients may omit it).
+  const thumbnailField = form.get("thumbnail");
+  const thumbnail =
+    thumbnailField instanceof File && thumbnailField.size <= IDENTIFY_CONFIG.maxBytes ? thumbnailField : null;
+
   const requestId = form.get("request_id");
   if (typeof requestId !== "string" || !UUID_V4_RE.test(requestId)) {
     throw new HttpError(400, { error: "Missing request_id" });
   }
 
-  return { photo, requestId };
+  return { photo, thumbnail, requestId };
 }
 
 export async function encodeForAI(photo: File): Promise<string> {

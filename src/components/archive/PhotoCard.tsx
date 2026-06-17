@@ -71,7 +71,7 @@ export function PhotoCard({ photo, folders, onSelect, onMoved, onDeleted, onErro
           className="h-full w-full cursor-pointer"
         >
           <img
-            src={photo.signedUrl}
+            src={photo.thumbnailUrl}
             alt={photo.subjectName}
             onLoad={() => {
               setLoaded(true);

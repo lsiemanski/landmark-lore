@@ -5,7 +5,10 @@ import { PHOTO_STATUS_IDENTIFIED } from "@/lib/archive/constants";
 
 export interface PhotoCardData {
   id: string;
+  /** Full-resolution image, used by the detail modal. */
   signedUrl: string;
+  /** Small gallery-grid thumbnail; falls back to the full image for pre-thumbnail rows. */
+  thumbnailUrl: string;
   subjectName: string;
   description: string;
   folderId: string;
@@ -18,7 +21,7 @@ export async function listPhotos(
 ): Promise<PhotoCardData[]> {
   let query = supabase
     .from("photos")
-    .select("id, folder_id, storage_path, created_at, identifications(subject_name, description)")
+    .select("id, folder_id, storage_path, thumbnail_path, created_at, identifications(subject_name, description)")
     .eq("user_id", params.userId)
     .eq("status", PHOTO_STATUS_IDENTIFIED)
     .order("created_at", { ascending: false });
@@ -31,16 +34,22 @@ export async function listPhotos(
   if (error) throw new HttpError(500, { error: "Failed to list photos" });
   if (data.length === 0) return [];
 
-  const paths = data.map((row) => row.storage_path);
-  const { data: signedUrls, error: urlError } = await supabase.storage
-    .from(PHOTOS_BUCKET)
-    .createSignedUrls(paths, 3600);
+  // Sign the full image (for the detail modal) and the thumbnail (for the grid).
+  // Pre-thumbnail rows fall back to the full image so the grid still renders.
+  const fullPaths = data.map((row) => row.storage_path);
+  const thumbPaths = data.map((row) => row.thumbnail_path ?? row.storage_path);
 
-  if (urlError) throw new HttpError(500, { error: "Failed to generate signed URLs" });
+  const [fullRes, thumbRes] = await Promise.all([
+    supabase.storage.from(PHOTOS_BUCKET).createSignedUrls(fullPaths, 3600),
+    supabase.storage.from(PHOTOS_BUCKET).createSignedUrls(thumbPaths, 3600),
+  ]);
+
+  if (fullRes.error || thumbRes.error) throw new HttpError(500, { error: "Failed to generate signed URLs" });
 
   return data.map((row, i) => ({
     id: row.id,
-    signedUrl: signedUrls[i]?.signedUrl ?? "",
+    signedUrl: fullRes.data[i]?.signedUrl ?? "",
+    thumbnailUrl: thumbRes.data[i]?.signedUrl ?? "",
     subjectName: row.identifications?.subject_name ?? "",
     description: row.identifications?.description ?? "",
     folderId: row.folder_id,
@@ -65,10 +74,10 @@ export async function movePhoto(
 export async function deletePhotoRecord(
   supabase: SupabaseClient,
   params: { userId: string; photoId: string },
-): Promise<{ storagePath: string }> {
+): Promise<{ storagePath: string; thumbnailPath: string | null }> {
   const { data, error } = await supabase
     .from("photos")
-    .select("storage_path")
+    .select("storage_path, thumbnail_path")
     .eq("id", params.photoId)
     .eq("user_id", params.userId)
     .single();
@@ -76,6 +85,7 @@ export async function deletePhotoRecord(
   if (error) throw new HttpError(404, { error: "Photo not found" });
 
   const storagePath = data.storage_path;
+  const thumbnailPath = data.thumbnail_path;
 
   const { error: deleteError } = await supabase
     .from("photos")
@@ -85,11 +95,11 @@ export async function deletePhotoRecord(
 
   if (deleteError) throw new HttpError(500, { error: "Failed to delete photo" });
 
-  return { storagePath };
+  return { storagePath, thumbnailPath };
 }
 
-export async function deletePhotoFromStorage(supabase: SupabaseClient, storagePath: string): Promise<void> {
-  const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
+export async function deletePhotoFromStorage(supabase: SupabaseClient, storagePaths: string[]): Promise<void> {
+  const { error } = await supabase.storage.from(PHOTOS_BUCKET).remove(storagePaths);
   if (error) throw new HttpError(502, { error: "Failed to delete photo from storage" });
 }
 

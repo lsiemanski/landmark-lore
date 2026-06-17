@@ -124,6 +124,7 @@ export interface Database {
           request_id: string | null;
           status: Database["public"]["Enums"]["photo_status"];
           storage_path: string;
+          thumbnail_path: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -138,6 +139,7 @@ export interface Database {
           request_id?: string | null;
           status?: Database["public"]["Enums"]["photo_status"];
           storage_path: string;
+          thumbnail_path?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -152,6 +154,7 @@ export interface Database {
           request_id?: string | null;
           status?: Database["public"]["Enums"]["photo_status"];
           storage_path?: string;
+          thumbnail_path?: string | null;
           updated_at?: string;
           user_id?: string;
         };

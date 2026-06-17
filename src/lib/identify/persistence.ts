@@ -22,6 +22,8 @@ export interface PhotoUploadCommand {
   photoId: string;
   requestId: string;
   photo: File;
+  /** Gallery thumbnail, or null when the client didn't supply one. */
+  thumbnail: File | null;
   folderId: string;
   photoHash: string;
 }
@@ -79,6 +81,22 @@ async function uploadPhotoToStorage(
   return storagePath;
 }
 
+/** Upload the (always-JPEG) gallery thumbnail to a sibling path. */
+async function uploadThumbnailToStorage(
+  supabase: SupabaseClient,
+  userId: string,
+  photoId: string,
+  thumbnail: File,
+): Promise<string> {
+  const storagePath = `${userId}/${photoId}_thumb.jpg`;
+  const arrayBuffer = await thumbnail.arrayBuffer();
+  const { error } = await supabase.storage
+    .from(PHOTOS_BUCKET)
+    .upload(storagePath, arrayBuffer, { contentType: "image/jpeg" });
+  if (error) throw new HttpError(502, { error: "Thumbnail upload failed" });
+  return storagePath;
+}
+
 export async function persistPhotoAndIdentification(
   supabase: SupabaseClient,
   user: { id: string },
@@ -87,12 +105,23 @@ export async function persistPhotoAndIdentification(
 ): Promise<void> {
   // Storage upload that succeeds before a DB failure leaves an orphan object — accepted MVP risk.
   const storagePath = await uploadPhotoToStorage(supabase, user.id, upload.photoId, upload.photo);
+  // A thumbnail is a cosmetic grid asset the gallery can live without (nullable column +
+  // full-image fallback), so a thumbnail-upload failure must not sink the whole request.
+  let thumbnailPath: string | null = null;
+  if (upload.thumbnail) {
+    try {
+      thumbnailPath = await uploadThumbnailToStorage(supabase, user.id, upload.photoId, upload.thumbnail);
+    } catch {
+      console.error(`Thumbnail upload failed for photo ${upload.photoId}; storing without thumbnail.`);
+    }
+  }
 
   const { error: photoError } = await supabase.from("photos").insert({
     id: upload.photoId,
     user_id: user.id,
     folder_id: upload.folderId,
     storage_path: storagePath,
+    thumbnail_path: thumbnailPath,
     mime_type: upload.photo.type,
     original_filename: upload.photo.name,
     file_size: upload.photo.size,

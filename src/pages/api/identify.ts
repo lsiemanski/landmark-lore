@@ -12,13 +12,13 @@ export const POST: APIRoute = apiRoute(async (context) => {
   const supabase = requireSupabaseClient(context);
   const user = await requireAuthenticatedUser(supabase);
 
-  const { photo, requestId } = await parseUploadRequest(context.request);
+  const { photo, thumbnail, requestId } = await parseUploadRequest(context.request);
   const photoHash = await hashPhoto(photo);
 
   const cached = await resolveIdempotency(supabase, user.id, requestId, photoHash);
   if (cached) return cached;
 
-  return await identify(supabase, user, { photo, requestId, photoHash, apiKey });
+  return await identify(supabase, user, { photo, thumbnail, requestId, photoHash, apiKey });
 });
 
 // --- Orchestration steps ------------------------------------------------------
@@ -40,7 +40,7 @@ async function resolveIdempotency(
 async function identify(
   supabase: SupabaseClient,
   user: { id: string },
-  params: { photo: File; requestId: string; photoHash: string; apiKey: string },
+  params: { photo: File; thumbnail: File | null; requestId: string; photoHash: string; apiKey: string },
 ): Promise<Response> {
   const period = currentPeriod();
   await consumeSlot(supabase, period);
@@ -56,7 +56,14 @@ async function identify(
     await persistPhotoAndIdentification(
       supabase,
       user,
-      { photoId, requestId: params.requestId, photo: params.photo, folderId, photoHash: params.photoHash },
+      {
+        photoId,
+        requestId: params.requestId,
+        photo: params.photo,
+        thumbnail: params.thumbnail,
+        folderId,
+        photoHash: params.photoHash,
+      },
       result,
     );
     return Response.json({ result, photoId });

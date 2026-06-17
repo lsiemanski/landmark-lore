@@ -16,7 +16,9 @@ vi.mock("@/lib/api/auth", () => ({
 const { mockListPhotos, mockMovePhoto, mockDeletePhotoRecord, mockDeletePhotoFromStorage } = vi.hoisted(() => ({
   mockListPhotos: vi.fn().mockResolvedValue([]),
   mockMovePhoto: vi.fn().mockResolvedValue(undefined),
-  mockDeletePhotoRecord: vi.fn().mockResolvedValue({ storagePath: "user-123/photo-1.jpg" }),
+  mockDeletePhotoRecord: vi
+    .fn()
+    .mockResolvedValue({ storagePath: "user-123/photo-1.jpg", thumbnailPath: "user-123/photo-1_thumb.jpg" }),
   mockDeletePhotoFromStorage: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -45,7 +47,10 @@ beforeEach(() => {
   mockRequireAuthenticatedUser.mockResolvedValue({ id: "user-123" });
   mockListPhotos.mockResolvedValue([]);
   mockMovePhoto.mockResolvedValue(undefined);
-  mockDeletePhotoRecord.mockResolvedValue({ storagePath: "user-123/photo-1.jpg" });
+  mockDeletePhotoRecord.mockResolvedValue({
+    storagePath: "user-123/photo-1.jpg",
+    thumbnailPath: "user-123/photo-1_thumb.jpg",
+  });
   mockDeletePhotoFromStorage.mockResolvedValue(undefined);
   mockGetFolderById.mockResolvedValue({ id: "folder-2", name: "Travels" });
 });
@@ -114,7 +119,7 @@ describe("DELETE /api/archive/photos/[id]", () => {
     const response = await DELETE(makeAPIContext(null, { method: "DELETE", params: { id: "photo-1" } }));
     expect(response.status).toBe(200);
     expect(mockDeletePhotoRecord).toHaveBeenCalledWith({}, { userId: "user-123", photoId: "photo-1" });
-    expect(mockDeletePhotoFromStorage).toHaveBeenCalledWith({}, "user-123/photo-1.jpg");
+    expect(mockDeletePhotoFromStorage).toHaveBeenCalledWith({}, ["user-123/photo-1.jpg", "user-123/photo-1_thumb.jpg"]);
   });
 
   it("still returns 200 when storage deletion fails (orphan accepted risk)", async () => {

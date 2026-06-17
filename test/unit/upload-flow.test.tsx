@@ -9,7 +9,7 @@ import UploadFlow from "@/components/identify/UploadFlow";
 // Canvas / createImageBitmap aren't implemented in happy-dom, so stub the
 // downscale step out — its own scaling logic is covered in downscale.test.ts.
 vi.mock("@/lib/client/downscale", () => ({
-  downscale: vi.fn((blob: Blob) => Promise.resolve(blob)),
+  downscaleWithThumbnail: vi.fn((blob: Blob) => Promise.resolve({ image: blob, thumbnail: blob })),
 }));
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -196,6 +196,9 @@ describe("UploadFlow — request contract", () => {
     const photo = form.get("photo");
     expect(photo).toBeInstanceOf(File);
     expect((photo as File).name).toBe("photo.jpg");
+    const thumbnail = form.get("thumbnail");
+    expect(thumbnail).toBeInstanceOf(File);
+    expect((thumbnail as File).name).toBe("thumbnail.jpg");
     expect(form.get("request_id")).toEqual(expect.stringMatching(UUID_RE));
   });
 

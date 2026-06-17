@@ -30,12 +30,13 @@ export const DELETE: APIRoute = apiRoute(async (context) => {
   const user = await requireAuthenticatedUser(supabase);
   const photoId = context.params.id ?? "";
 
-  const { storagePath } = await deletePhotoRecord(supabase, { userId: user.id, photoId });
+  const { storagePath, thumbnailPath } = await deletePhotoRecord(supabase, { userId: user.id, photoId });
+  const paths = thumbnailPath ? [storagePath, thumbnailPath] : [storagePath];
 
   try {
-    await deletePhotoFromStorage(supabase, storagePath);
+    await deletePhotoFromStorage(supabase, paths);
   } catch {
-    console.error(`Orphaned storage object after photo delete: ${storagePath}`);
+    console.error(`Orphaned storage object(s) after photo delete: ${paths.join(", ")}`);
   }
 
   return Response.json({});
