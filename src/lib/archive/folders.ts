@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@/lib/supabase";
 import { HttpError } from "@/lib/api/http";
 
-export const DEFAULT_FOLDER_NAME = "Uncategorized";
-
 export interface FolderWithCount {
   id: string;
   name: string;

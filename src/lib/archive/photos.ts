@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@/lib/supabase";
 import { HttpError } from "@/lib/api/http";
 import { PHOTOS_BUCKET } from "@/lib/identify/storage";
+import { PHOTO_STATUS_IDENTIFIED } from "@/lib/archive/constants";
 
 export interface PhotoCardData {
   id: string;
@@ -18,7 +19,7 @@ export async function listPhotos(
     .from("photos")
     .select("id, folder_id, storage_path, created_at, identifications(subject_name)")
     .eq("user_id", params.userId)
-    .eq("status", "identified")
+    .eq("status", PHOTO_STATUS_IDENTIFIED)
     .order("created_at", { ascending: false });
 
   if (params.folderId) {

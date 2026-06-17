@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { IdentificationResult } from "@/components/identify/IdentificationResult";
 import PostIdentifyPanel from "@/components/identify/PostIdentifyPanel";
 import type { IdentificationResult as IdentificationResultData } from "@/lib/ai/identification";
-import { DEFAULT_FOLDER_NAME } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 import type { FolderWithCount } from "@/lib/archive/folders";
 
 type FlowState =
@@ -42,7 +42,7 @@ export default function UploadFlow() {
       .then((r) => r.json() as Promise<{ folders: FolderWithCount[] }>)
       .then(({ folders: f }) => {
         setFolders(f);
-        setSelectedFolderId(f.find((x) => x.name === DEFAULT_FOLDER_NAME)?.id ?? f[0].id);
+        setSelectedFolderId(f.find((x) => x.name === DEFAULT_FOLDER_NAME)?.id ?? (f.length > 0 ? f[0].id : ""));
       })
       .catch(() => {
         setFolders(null);

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { DEFAULT_FOLDER_NAME, type FolderWithCount } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
+import type { FolderWithCount } from "@/lib/archive/folders";
 import type { PhotoCardData } from "@/lib/archive/photos";
 import { FolderSidebar } from "./FolderSidebar";
 import { PhotoGrid } from "./PhotoGrid";

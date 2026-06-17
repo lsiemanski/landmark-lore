@@ -1,7 +1,8 @@
 import type { APIRoute } from "astro";
 import { apiRoute, HttpError } from "@/lib/api/http";
 import { requireSupabaseClient, requireAuthenticatedUser } from "@/lib/api/auth";
-import { DEFAULT_FOLDER_NAME, listFolders, createFolder } from "@/lib/archive/folders";
+import { listFolders, createFolder } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 
 export const GET: APIRoute = apiRoute(async (context) => {
   const supabase = requireSupabaseClient(context);

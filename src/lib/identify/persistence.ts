@@ -2,7 +2,7 @@ import { type SupabaseClient } from "@/lib/supabase";
 import type { IdentificationResult } from "@/lib/ai/identification";
 import { HttpError } from "@/lib/api/http";
 import { PHOTOS_BUCKET } from "@/lib/identify/storage";
-import { DEFAULT_FOLDER_NAME } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME, PHOTO_STATUS_IDENTIFIED } from "@/lib/archive/constants";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -98,7 +98,7 @@ export async function persistPhotoAndIdentification(
     file_size: upload.photo.size,
     photo_hash: upload.photoHash,
     request_id: upload.requestId,
-    status: "identified" as const,
+    status: PHOTO_STATUS_IDENTIFIED,
   });
   if (photoError) throw new HttpError(500, { error: "Failed to save photo" });
 
