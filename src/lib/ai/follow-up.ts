@@ -76,6 +76,11 @@ async function createFollowUpCompletion(
   params: FollowUpParams,
   model: string,
 ): Promise<OpenAI.Chat.ChatCompletion> {
+  // Unlike identification, this path intentionally leaves the model's reasoning
+  // enabled. Disabling it was investigated as a truncation cause and ruled out
+  // (re-enabling reproduced the cut byte-for-byte; reasoning_tokens was 0), and
+  // the generous followUpMaxTokens budget plus the finish_reason==="length"
+  // guard cover the truncation risk. See context/changes/follow-up-rate-limit-fix.
   try {
     return await client.chat.completions.create({
       model,

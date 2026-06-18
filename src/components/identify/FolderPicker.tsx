@@ -1,5 +1,4 @@
-import type { FolderWithCount } from "@/lib/archive/folders";
-import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
+import { type FolderWithCount, sortFoldersDefaultLast } from "@/lib/archive/folders";
 
 interface Props {
   folders: FolderWithCount[];
@@ -9,11 +8,7 @@ interface Props {
 }
 
 export default function FolderPicker({ folders, selectedFolderId, onChange, disabled }: Props) {
-  const sortedFolders = [...folders].sort((a, b) => {
-    const aDefault = a.name === DEFAULT_FOLDER_NAME ? 1 : 0;
-    const bDefault = b.name === DEFAULT_FOLDER_NAME ? 1 : 0;
-    return aDefault - bDefault;
-  });
+  const sortedFolders = sortFoldersDefaultLast(folders);
 
   return (
     <div className="space-y-1">

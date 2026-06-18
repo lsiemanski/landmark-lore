@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 import type { FolderWithCount } from "@/lib/archive/folders";
@@ -30,6 +30,12 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const renameCommitted = useRef(false);
+
+  // Stable identity so SuccessToast's auto-dismiss timer isn't reset by an
+  // unrelated re-render of this view during the toast's lifetime.
+  const dismissNotice = useCallback(() => {
+    setNotice(null);
+  }, []);
 
   function selectFolder(id: SelectedFolder) {
     setSelectedFolder(id);
@@ -248,12 +254,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
         }}
       />
 
-      <SuccessToast
-        message={notice ?? ""}
-        onDismiss={() => {
-          setNotice(null);
-        }}
-      />
+      <SuccessToast message={notice ?? ""} onDismiss={dismissNotice} />
     </>
   );
 }

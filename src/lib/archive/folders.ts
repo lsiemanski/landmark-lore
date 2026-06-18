@@ -1,11 +1,21 @@
 import type { SupabaseClient } from "@/lib/supabase";
 import { HttpError } from "@/lib/api/http";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 
 export interface FolderWithCount {
   id: string;
   name: string;
   photoCount: number;
   createdAt: string;
+}
+
+/** Order folders for display: user folders first, the default ("Uncategorized") last. */
+export function sortFoldersDefaultLast<T extends { name: string }>(folders: readonly T[]): T[] {
+  return [...folders].sort((a, b) => {
+    const aDefault = a.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    const bDefault = b.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    return aDefault - bDefault;
+  });
 }
 
 export async function listFolders(supabase: SupabaseClient, userId: string): Promise<FolderWithCount[]> {
