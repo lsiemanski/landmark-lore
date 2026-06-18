@@ -1,8 +1,9 @@
 import { http, HttpResponse } from "msw";
 import OpenAI from "openai";
 import { answerFollowUp, type FollowUpParams } from "@/lib/ai/follow-up";
+import { UpstreamRateLimitError } from "@/lib/ai/openrouter";
 import { server } from "../msw/server";
-import { makeCompletionResponse } from "../helpers/openrouter";
+import { makeCompletionResponse, makeEmbeddedErrorResponse } from "../helpers/openrouter";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -22,6 +23,7 @@ describe("answerFollowUp", () => {
             JSON.stringify({
               answer: "Gustave Eiffel's company designed it.",
               enrichedDescription: "A famous Parisian landmark, designed by Gustave Eiffel's company.",
+              updatedSubjectName: "",
             }),
           ),
         ),
@@ -31,6 +33,7 @@ describe("answerFollowUp", () => {
     expect(result).toEqual({
       answer: "Gustave Eiffel's company designed it.",
       enrichedDescription: "A famous Parisian landmark, designed by Gustave Eiffel's company.",
+      updatedSubjectName: "",
     });
   });
 
@@ -41,7 +44,9 @@ describe("answerFollowUp", () => {
         const body = (await request.json()) as { messages: typeof messages };
         messages = body.messages;
         return HttpResponse.json(
-          makeCompletionResponse(JSON.stringify({ answer: "It was completed in 1889.", enrichedDescription: "" })),
+          makeCompletionResponse(
+            JSON.stringify({ answer: "It was completed in 1889.", enrichedDescription: "", updatedSubjectName: "" }),
+          ),
         );
       }),
     );
@@ -85,12 +90,65 @@ describe("answerFollowUp", () => {
           );
         }
         return HttpResponse.json(
-          makeCompletionResponse(JSON.stringify({ answer: "An answer.", enrichedDescription: "Updated." })),
+          makeCompletionResponse(
+            JSON.stringify({ answer: "An answer.", enrichedDescription: "Updated.", updatedSubjectName: "" }),
+          ),
         );
       }),
     );
     await answerFollowUp(baseParams, "test-api-key");
     expect(calls).toBe(2);
+  });
+
+  it("retries an embedded 429 (200 body) and resolves once it clears", async () => {
+    let calls = 0;
+    server.use(
+      http.post(OPENROUTER_URL, () => {
+        calls++;
+        if (calls === 1) return HttpResponse.json(makeEmbeddedErrorResponse(429));
+        return HttpResponse.json(
+          makeCompletionResponse(
+            JSON.stringify({ answer: "It was built in 1889.", enrichedDescription: "", updatedSubjectName: "" }),
+          ),
+        );
+      }),
+    );
+    const result = await answerFollowUp(baseParams, "test-api-key");
+    expect(result.answer).toBe("It was built in 1889.");
+    expect(calls).toBe(2);
+  });
+
+  it("falls back to the free model when the active one stays rate-limited", async () => {
+    const models: string[] = [];
+    server.use(
+      http.post(OPENROUTER_URL, async ({ request }) => {
+        const body = (await request.json()) as { model: string };
+        models.push(body.model);
+        if (body.model === "google/gemini-2.5-flash") return HttpResponse.json(makeEmbeddedErrorResponse(429));
+        return HttpResponse.json(
+          makeCompletionResponse(
+            JSON.stringify({ answer: "Answered by the free model.", enrichedDescription: "", updatedSubjectName: "" }),
+          ),
+        );
+      }),
+    );
+    const result = await answerFollowUp(baseParams, "test-api-key");
+    expect(result.answer).toBe("Answered by the free model.");
+    // Active model exhausts its retries, then the free model answers.
+    expect(models).toContain("google/gemini-2.0-flash-lite:free");
+  });
+
+  it("throws UpstreamRateLimitError when an embedded 429 persists across every model", async () => {
+    let calls = 0;
+    server.use(
+      http.post(OPENROUTER_URL, () => {
+        calls++;
+        return HttpResponse.json(makeEmbeddedErrorResponse(429));
+      }),
+    );
+    await expect(answerFollowUp(baseParams, "test-api-key")).rejects.toBeInstanceOf(UpstreamRateLimitError);
+    // 3 retries on the active model, then 3 on the free fallback.
+    expect(calls).toBe(6);
   });
 
   it("rejects with OpenAI.APIError for a non-400 HTTP error", async () => {

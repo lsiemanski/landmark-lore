@@ -3,10 +3,12 @@ import { HttpError } from "@/lib/api/http";
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function parseUploadRequest(
-  request: Request,
-): Promise<{ photo: File; thumbnail: File | null; requestId: string }> {
-  const form = await request.formData();
+/**
+ * Validate the photo (and optional thumbnail) on an already-parsed multipart
+ * form. Shared by the identify route (photo only) and the save route (photo +
+ * thumbnail), so a form is only read once by the caller.
+ */
+export function validatePhotoFields(form: FormData): { photo: File; thumbnail: File | null } {
   const photo = form.get("photo");
   if (!(photo instanceof File)) throw new HttpError(415, { error: "Unsupported media type" });
   if (!IDENTIFY_CONFIG.allowedTypes.includes(photo.type)) {
@@ -19,12 +21,18 @@ export async function parseUploadRequest(
   const thumbnail =
     thumbnailField instanceof File && thumbnailField.size <= IDENTIFY_CONFIG.maxBytes ? thumbnailField : null;
 
-  const requestId = form.get("request_id");
-  if (typeof requestId !== "string" || !UUID_V4_RE.test(requestId)) {
-    throw new HttpError(400, { error: "Missing request_id" });
-  }
+  return { photo, thumbnail };
+}
 
-  return { photo, thumbnail, requestId };
+/** Identify only needs the image itself — nothing is persisted at this stage. */
+export async function parseUploadRequest(request: Request): Promise<{ photo: File }> {
+  const form = await request.formData();
+  const { photo } = validatePhotoFields(form);
+  return { photo };
+}
+
+export function isValidRequestId(value: unknown): value is string {
+  return typeof value === "string" && UUID_V4_RE.test(value);
 }
 
 export async function encodeForAI(photo: File): Promise<string> {

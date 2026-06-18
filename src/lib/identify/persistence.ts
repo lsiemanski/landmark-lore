@@ -10,13 +10,6 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/webp": "webp",
 };
 
-/** A prior identification recovered from the idempotency cache. */
-export interface CachedIdentification {
-  photoId: string;
-  photoHash: string;
-  result: IdentificationResult;
-}
-
 /** Everything the handler has assembled to persist one recognised photo. */
 export interface PhotoUploadCommand {
   photoId: string;
@@ -26,30 +19,6 @@ export interface PhotoUploadCommand {
   thumbnail: File | null;
   folderId: string;
   photoHash: string;
-}
-
-export async function checkIdempotencyCache(
-  supabase: SupabaseClient,
-  userId: string,
-  requestId: string,
-): Promise<CachedIdentification | null> {
-  const { data, error } = await supabase
-    .from("photos")
-    .select("id, photo_hash, identifications(subject_name, description)")
-    .eq("user_id", userId)
-    .eq("request_id", requestId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const id = data.identifications;
-  if (!id) return null;
-
-  return {
-    photoId: data.id,
-    photoHash: data.photo_hash,
-    result: { recognised: true, subjectName: id.subject_name, description: id.description },
-  };
 }
 
 export async function lookupDefaultFolder(supabase: SupabaseClient, userId: string): Promise<string> {

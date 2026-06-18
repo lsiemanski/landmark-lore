@@ -27,11 +27,16 @@ followUpSystemPrompt: |
   is the prior description rewritten to integrate any new facts surfaced by this exchange, preserving
   its original tone and length — a self-contained description, not a changelog, and not a copy of the
   answer. If no prior description was provided, set "enrichedDescription" to an empty string.
+  "updatedSubjectName" is a corrected or more precise name for the subject, set ONLY when this exchange
+  establishes that the original identification was wrong or imprecise (e.g. the user corrects it, or new
+  detail pins down a more specific subject). If the identified subject is unchanged, or no identification
+  was provided, set "updatedSubjectName" to an empty string.
 
 followUpContextPreamble: |
   Here is the photo in question. The user will ask follow-up questions about its subject.
 
 followUpJsonShapeHint: |
   Respond with a JSON object matching exactly:
-  { answer: string, enrichedDescription: string }.
+  { answer: string, enrichedDescription: string, updatedSubjectName: string }.
   "enrichedDescription" is the prior description updated with any new facts (empty string if none was given).
+  "updatedSubjectName" is a corrected/more precise subject name, or an empty string if the subject is unchanged.

@@ -46,6 +46,26 @@ describe("FollowUpChat", () => {
     expect(onDescriptionUpdate).toHaveBeenCalledWith("An iconic iron tower designed by Gustave Eiffel.");
   });
 
+  it("a response carrying subjectName fires onSubjectNameUpdate with the corrected name", async () => {
+    server.use(
+      http.post("*/api/follow-up", () =>
+        HttpResponse.json({
+          answer: "It's actually the Statue of Liberty.",
+          subjectName: "Statue of Liberty",
+        }),
+      ),
+    );
+    const onSubjectNameUpdate = vi.fn();
+    const user = userEvent.setup();
+    renderChat({ onSubjectNameUpdate });
+
+    await user.type(screen.getByRole("textbox", { name: /follow-up question/i }), "Is that the Eiffel Tower?");
+    await user.click(screen.getByRole("button", { name: /ask/i }));
+
+    await screen.findByText("It's actually the Statue of Liberty.");
+    expect(onSubjectNameUpdate).toHaveBeenCalledWith("Statue of Liberty");
+  });
+
   it("a failed call shows inline retry and preserves prior turns", async () => {
     server.use(http.post("*/api/follow-up", () => HttpResponse.json({ error: "AI error" }, { status: 500 })));
     const user = userEvent.setup();

@@ -24,9 +24,20 @@ function makeFile() {
 function recognised(overrides?: Record<string, unknown>) {
   return {
     result: { recognised: true, subjectName: "Eiffel Tower", description: "An iron tower in Paris." },
-    photoId: "photo-1",
     ...overrides,
   };
+}
+
+/** MSW handlers a save needs: the folders list and the save endpoint. */
+function saveHandlers() {
+  return [
+    http.get("*/api/archive/folders", () =>
+      HttpResponse.json({
+        folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+      }),
+    ),
+    http.post("*/api/archive/photos", () => HttpResponse.json({ photoId: "photo-1" }, { status: 201 })),
+  ];
 }
 
 /** Drive idle → working: pick a file and click Identify. */
@@ -65,11 +76,7 @@ describe("UploadFlow — recognised result", () => {
   it("renders the subject, description and Save/Discard actions", async () => {
     server.use(
       http.post("*/api/identify", () => HttpResponse.json(recognised())),
-      http.get("*/api/archive/folders", () =>
-        HttpResponse.json({
-          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
-        }),
-      ),
+      ...saveHandlers(),
     );
     const user = userEvent.setup();
     render(<UploadFlow />);
@@ -84,11 +91,7 @@ describe("UploadFlow — recognised result", () => {
   it("transitions to saved state and shows Identify another after Save", async () => {
     server.use(
       http.post("*/api/identify", () => HttpResponse.json(recognised())),
-      http.get("*/api/archive/folders", () =>
-        HttpResponse.json({
-          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
-        }),
-      ),
+      ...saveHandlers(),
     );
     const user = userEvent.setup();
     render(<UploadFlow />);
@@ -178,7 +181,7 @@ describe("UploadFlow — loading state", () => {
 });
 
 describe("UploadFlow — request contract", () => {
-  it("posts the photo and a valid request_id", async () => {
+  it("posts only the photo to identify (nothing is persisted yet)", async () => {
     const captured: { form: FormData | null } = { form: null };
     server.use(
       http.post("*/api/identify", async ({ request }) => {
@@ -196,37 +199,67 @@ describe("UploadFlow — request contract", () => {
     const photo = form.get("photo");
     expect(photo).toBeInstanceOf(File);
     expect((photo as File).name).toBe("photo.jpg");
-    const thumbnail = form.get("thumbnail");
-    expect(thumbnail).toBeInstanceOf(File);
-    expect((thumbnail as File).name).toBe("thumbnail.jpg");
-    expect(form.get("request_id")).toEqual(expect.stringMatching(UUID_RE));
+    // request_id and thumbnail belong to the save step, not identify.
+    expect(form.get("request_id")).toBeNull();
+    expect(form.get("thumbnail")).toBeNull();
   });
 
-  it("generates a fresh request_id for each identify action", async () => {
-    const ids: string[] = [];
+  it("posts the photo, thumbnail, identification and a valid request_id when saving", async () => {
+    const captured: { form: FormData | null } = { form: null };
     server.use(
-      http.post("*/api/identify", async ({ request }) => {
-        const form = await request.formData();
-        const id = form.get("request_id");
-        if (typeof id === "string") ids.push(id);
-        return HttpResponse.json(recognised());
-      }),
+      http.post("*/api/identify", () => HttpResponse.json(recognised())),
       http.get("*/api/archive/folders", () =>
         HttpResponse.json({
           folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
         }),
       ),
+      http.post("*/api/archive/photos", async ({ request }) => {
+        captured.form = await request.formData();
+        return HttpResponse.json({ photoId: "photo-1" }, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<UploadFlow />);
+    await selectAndIdentify(user);
+    await user.click(await screen.findByRole("button", { name: /save to archive/i }));
+    await screen.findByText(/saved in/i);
+
+    const form = captured.form;
+    if (!form) throw new Error("save request was not captured");
+    expect((form.get("photo") as File).name).toBe("photo.jpg");
+    expect((form.get("thumbnail") as File).name).toBe("thumbnail.jpg");
+    const payload = JSON.parse(form.get("payload") as string);
+    expect(payload.subjectName).toBe("Eiffel Tower");
+    expect(payload.description).toBe("An iron tower in Paris.");
+    expect(payload.requestId).toEqual(expect.stringMatching(UUID_RE));
+  });
+
+  it("generates a fresh request_id for each save", async () => {
+    const ids: string[] = [];
+    server.use(
+      http.post("*/api/identify", () => HttpResponse.json(recognised())),
+      http.get("*/api/archive/folders", () =>
+        HttpResponse.json({
+          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
+        }),
+      ),
+      http.post("*/api/archive/photos", async ({ request }) => {
+        const form = await request.formData();
+        const payload = JSON.parse(form.get("payload") as string);
+        if (typeof payload.requestId === "string") ids.push(payload.requestId);
+        return HttpResponse.json({ photoId: "photo-1" }, { status: 201 });
+      }),
     );
     const user = userEvent.setup();
     render(<UploadFlow />);
 
     await selectAndIdentify(user);
-    await screen.findByRole("button", { name: /save to archive/i });
-    await user.click(screen.getByRole("button", { name: /save to archive/i }));
+    await user.click(await screen.findByRole("button", { name: /save to archive/i }));
     await user.click(await screen.findByRole("button", { name: /identify another/i }));
 
     await selectAndIdentify(user);
-    await screen.findByRole("heading", { name: "Eiffel Tower" });
+    await user.click(await screen.findByRole("button", { name: /save to archive/i }));
+    await screen.findByRole("button", { name: /identify another/i });
 
     expect(ids).toHaveLength(2);
     expect(ids[0]).not.toBe(ids[1]);
@@ -237,11 +270,7 @@ describe("UploadFlow — reset", () => {
   it("returns to idle and revokes the preview URL on Identify another", async () => {
     server.use(
       http.post("*/api/identify", () => HttpResponse.json(recognised())),
-      http.get("*/api/archive/folders", () =>
-        HttpResponse.json({
-          folders: [{ id: "unc-1", name: "Uncategorized", photoCount: 0, createdAt: "2026-01-01T00:00:00Z" }],
-        }),
-      ),
+      ...saveHandlers(),
     );
     const user = userEvent.setup();
     render(<UploadFlow />);

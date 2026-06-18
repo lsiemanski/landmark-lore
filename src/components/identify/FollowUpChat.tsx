@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 interface CompletedTurn {
@@ -34,14 +34,22 @@ interface Props {
   anchor: { subjectName: string; description: string } | null;
   photoId?: string;
   onDescriptionUpdate?: (description: string) => void;
+  onSubjectNameUpdate?: (subjectName: string) => void;
 }
 
-export default function FollowUpChat({ imageBlob, anchor, photoId, onDescriptionUpdate }: Props) {
+export default function FollowUpChat({ imageBlob, anchor, photoId, onDescriptionUpdate, onSubjectNameUpdate }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [limitReached, setLimitReached] = useState<LimitState | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const isPending = turns.some((t) => t.status === "pending");
+
+  // Refocus the question field once a turn settles — it is disabled while a
+  // request is in flight, so focus must be restored after `isPending` clears.
+  useEffect(() => {
+    if (!isPending && turns.length > 0) inputRef.current?.focus();
+  }, [isPending, turns.length]);
 
   async function doSend(question: string, turnIndex: number, history: HistoryEntry[]) {
     try {
@@ -53,6 +61,7 @@ export default function FollowUpChat({ imageBlob, anchor, photoId, onDescription
       const json = (await res.json()) as {
         answer?: string;
         description?: string;
+        subjectName?: string;
         error?: string;
         limit?: number;
         used?: number;
@@ -73,6 +82,9 @@ export default function FollowUpChat({ imageBlob, anchor, photoId, onDescription
       );
       if (json.description && onDescriptionUpdate) {
         onDescriptionUpdate(json.description);
+      }
+      if (json.subjectName && onSubjectNameUpdate) {
+        onSubjectNameUpdate(json.subjectName);
       }
     } catch {
       setTurns((prev) => prev.map((t, i): Turn => (i === turnIndex ? { status: "failed", question } : t)));
@@ -155,6 +167,7 @@ export default function FollowUpChat({ imageBlob, anchor, photoId, onDescription
       ) : (
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={inputValue}
             onChange={(e) => {

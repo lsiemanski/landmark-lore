@@ -10,8 +10,9 @@ interface IdentifiedState {
   status: "identified";
   previewUrl: string;
   result: IdentificationResultData;
-  photoId: string;
   imageBlob: Blob;
+  thumbnailBlob: Blob;
+  requestId: string;
 }
 interface SavedState {
   status: "saved";
@@ -24,12 +25,12 @@ interface Props {
   folders: FolderWithCount[] | null;
   selectedFolderId: string;
   saving: boolean;
-  discarding: boolean;
   onSave: () => void;
   onDiscard: () => void;
   onFolderChange: (id: string) => void;
   onReset: () => void;
   onDescriptionUpdate: (description: string) => void;
+  onSubjectNameUpdate: (subjectName: string) => void;
 }
 
 export default function PostIdentifyPanel({
@@ -37,12 +38,12 @@ export default function PostIdentifyPanel({
   folders,
   selectedFolderId,
   saving,
-  discarding,
   onSave,
   onDiscard,
   onFolderChange,
   onReset,
   onDescriptionUpdate,
+  onSubjectNameUpdate,
 }: Props) {
   if (flowState.status === "saved") {
     return (
@@ -70,7 +71,7 @@ export default function PostIdentifyPanel({
     );
   }
 
-  const busy = saving || discarding;
+  const busy = saving;
   return (
     <div className="space-y-6">
       <img
@@ -82,8 +83,8 @@ export default function PostIdentifyPanel({
       <FollowUpChat
         imageBlob={flowState.imageBlob}
         anchor={{ subjectName: flowState.result.subjectName, description: flowState.result.description }}
-        photoId={flowState.photoId}
         onDescriptionUpdate={onDescriptionUpdate}
+        onSubjectNameUpdate={onSubjectNameUpdate}
       />
       {folders && (
         <FolderPicker folders={folders} selectedFolderId={selectedFolderId} onChange={onFolderChange} disabled={busy} />

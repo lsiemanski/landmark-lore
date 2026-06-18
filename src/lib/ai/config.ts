@@ -16,14 +16,24 @@ import { ALLOWED_IMAGE_TYPES } from "@/lib/media-types";
 export const IDENTIFY_CONFIG = {
   /** Active model. Override with IDENTIFY_MODEL; defaults to the registry's paid tier. */
   model: IDENTIFY_MODEL ?? MODELS.paid,
+  /**
+   * Model tried when the active one stays rate-limited (HTTP 429) after our
+   * retries. The free tier is slower/less capable but keeps the feature working
+   * through a transient throttle on the paid model.
+   */
+  fallbackModel: MODELS.free,
   /** Per-user daily image-identification cap. Override with IDENTIFY_DAILY_LIMIT. */
   dailyImageLimit: IDENTIFY_DAILY_LIMIT ?? 100,
   /** Per-user daily follow-up cap. Override with FOLLOWUP_DAILY_LIMIT. */
   followUpDailyLimit: FOLLOWUP_DAILY_LIMIT ?? 200,
-  /** Max tokens requested per identification completion. */
-  maxTokens: 1024,
-  /** Max tokens per follow-up completion — carries both the answer and a full description rewrite. */
-  followUpMaxTokens: 2048,
+  /** Max tokens requested per identification completion. A ceiling, not a target. */
+  maxTokens: 2048,
+  /**
+   * Max tokens per follow-up completion. A ceiling, not a target: the model only
+   * generates what it needs, so a generous cap costs nothing extra but leaves
+   * room for a long answer plus a full description rewrite in the same response.
+   */
+  followUpMaxTokens: 8192,
   /** Max accepted upload size in bytes (after client-side downscale). */
   maxBytes: 5 * 1024 * 1024,
   /** Accepted upload media types. */

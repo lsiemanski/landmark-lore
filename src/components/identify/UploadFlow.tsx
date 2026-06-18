@@ -11,7 +11,14 @@ import type { FolderWithCount } from "@/lib/archive/folders";
 type FlowState =
   | { status: "idle" }
   | { status: "working"; previewUrl: string }
-  | { status: "identified"; previewUrl: string; result: IdentificationResultData; photoId: string; imageBlob: Blob }
+  | {
+      status: "identified";
+      previewUrl: string;
+      result: IdentificationResultData;
+      imageBlob: Blob;
+      thumbnailBlob: Blob;
+      requestId: string;
+    }
   | { status: "unrecognized"; previewUrl: string; result: IdentificationResultData; imageBlob: Blob }
   | { status: "saved"; subjectName: string; folderName: string }
   | { status: "error"; kind: "quota"; limit: number; used: number }
@@ -23,7 +30,6 @@ export default function UploadFlow() {
   const [folders, setFolders] = useState<FolderWithCount[] | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [saving, setSaving] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlight = useRef(false);
 
@@ -37,7 +43,7 @@ export default function UploadFlow() {
 
   useEffect(() => {
     if (flowState.status !== "identified") return;
-    fetch("/api/archive/folders")
+    fetch("/api/archive/folders", { cache: "no-store" })
       .then((r) => r.json() as Promise<{ folders: FolderWithCount[] }>)
       .then(({ folders: f }) => {
         setFolders(f);
@@ -66,12 +72,9 @@ export default function UploadFlow() {
       setFlowState({ status: "working", previewUrl: url });
       const form = new FormData();
       form.append("photo", downsized, "photo.jpg");
-      form.append("thumbnail", thumbnail, "thumbnail.jpg");
-      form.append("request_id", requestId);
       const res = await fetch("/api/identify", { method: "POST", body: form });
       const json = (await res.json()) as {
         result?: IdentificationResultData;
-        photoId?: string;
         error?: string;
         limit?: number;
         used?: number;
@@ -84,13 +87,14 @@ export default function UploadFlow() {
         }
         return;
       }
-      if (json.photoId && json.result) {
+      if (json.result?.recognised) {
         setFlowState({
           status: "identified",
           previewUrl: url,
           result: json.result,
-          photoId: json.photoId,
           imageBlob: downsized,
+          thumbnailBlob: thumbnail,
+          requestId,
         });
       } else if (json.result) {
         setFlowState({
@@ -116,43 +120,48 @@ export default function UploadFlow() {
   async function handleSave() {
     if (flowState.status !== "identified" || saving) return;
     setSaving(true);
-    const { photoId, result } = flowState;
-    const uncatId = folders?.find((f) => f.name === DEFAULT_FOLDER_NAME)?.id;
+    const { result, imageBlob, thumbnailBlob, requestId } = flowState;
     const folderName = folders?.find((f) => f.id === selectedFolderId)?.name ?? DEFAULT_FOLDER_NAME;
     try {
-      if (selectedFolderId && selectedFolderId !== uncatId) {
-        const res = await fetch(`/api/archive/photos/${photoId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folderId: selectedFolderId }),
-        });
-        if (!res.ok) throw new Error("Move failed");
-      }
+      // Persistence happens here, not at identify time: the photo enters the
+      // archive only on an explicit Save, carrying any follow-up enrichments.
+      const form = new FormData();
+      form.append("photo", imageBlob, "photo.jpg");
+      form.append("thumbnail", thumbnailBlob, "thumbnail.jpg");
+      form.append(
+        "payload",
+        JSON.stringify({
+          subjectName: result.subjectName,
+          description: result.description,
+          folderId: selectedFolderId || undefined,
+          requestId,
+        }),
+      );
+      const res = await fetch("/api/archive/photos", { method: "POST", body: form });
+      if (!res.ok) throw new Error("Save failed");
       setFlowState({ status: "saved", subjectName: result.subjectName, folderName });
     } catch {
-      setFlowState({ status: "saved", subjectName: result.subjectName, folderName: DEFAULT_FOLDER_NAME });
+      setFlowState({ status: "error", kind: "general", message: "Couldn't save the photo. Please try again." });
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDiscard() {
-    if (flowState.status !== "identified" || discarding) return;
-    setDiscarding(true);
-    try {
-      const res = await fetch(`/api/archive/photos/${flowState.photoId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Discard failed");
-      resetToIdle();
-    } catch {
-      setFlowState({ status: "error", kind: "general", message: "Couldn't discard the photo. Please try again." });
-    } finally {
-      setDiscarding(false);
-    }
+  // Nothing is persisted before Save, so discarding is purely client-side.
+  function handleDiscard() {
+    if (flowState.status !== "identified") return;
+    resetToIdle();
   }
 
   function handleDescriptionUpdate(description: string) {
     setFlowState((prev) =>
       prev.status === "identified" ? { ...prev, result: { ...prev.result, description } } : prev,
+    );
+  }
+
+  function handleSubjectNameUpdate(subjectName: string) {
+    setFlowState((prev) =>
+      prev.status === "identified" ? { ...prev, result: { ...prev.result, subjectName } } : prev,
     );
   }
 
@@ -185,12 +194,12 @@ export default function UploadFlow() {
         folders={folders}
         selectedFolderId={selectedFolderId}
         saving={saving}
-        discarding={discarding}
         onSave={handleSave}
         onDiscard={handleDiscard}
         onFolderChange={setSelectedFolderId}
         onReset={resetToIdle}
         onDescriptionUpdate={handleDescriptionUpdate}
+        onSubjectNameUpdate={handleSubjectNameUpdate}
       />
     );
   }

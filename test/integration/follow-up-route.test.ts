@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { POST } from "@/pages/api/follow-up";
 import { server } from "../msw/server";
-import { makeCompletionResponse } from "../helpers/openrouter";
+import { makeCompletionResponse, makeEmbeddedErrorResponse } from "../helpers/openrouter";
 import { makeAPIContext } from "../helpers/route";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -9,6 +9,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const FOLLOW_UP_CONTENT = JSON.stringify({
   answer: "It was built in 1889.",
   enrichedDescription: "The Eiffel Tower, completed in 1889, stands 330 metres tall.",
+  updatedSubjectName: "",
 });
 
 const { mockGetUser, mockRpc, mockIdentificationsUpdateEq, mockIdentificationsUpdate } = vi.hoisted(() => {
@@ -89,6 +90,46 @@ describe("Risk 2.6 — recognized request persists and returns enriched descript
   });
 });
 
+// Risk 2.6b — recognized: a corrected subject name is persisted and returned
+describe("Risk 2.6b — recognized request persists and returns a corrected subject name", () => {
+  it("persists subject_name and returns it as subjectName when the model renames the subject", async () => {
+    server.use(
+      http.post(OPENROUTER_URL, () =>
+        HttpResponse.json(
+          makeCompletionResponse(
+            JSON.stringify({
+              answer: "It's actually the Statue of Liberty.",
+              enrichedDescription: "The Statue of Liberty, a neoclassical sculpture in New York Harbor.",
+              updatedSubjectName: "Statue of Liberty",
+            }),
+          ),
+        ),
+      ),
+    );
+    const payload = { ...makeBasicPayload(), photoId: "photo-abc" };
+    const response = await POST(makeAPIContext(makeFormData(payload)));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.subjectName).toBe("Statue of Liberty");
+    expect(mockIdentificationsUpdate).toHaveBeenCalledWith(
+      {
+        description: "The Statue of Liberty, a neoclassical sculpture in New York Harbor.",
+        subject_name: "Statue of Liberty",
+      },
+      { count: "exact" },
+    );
+    expect(mockIdentificationsUpdateEq).toHaveBeenCalledWith("photo_id", "photo-abc");
+  });
+
+  it("does not persist or return a subject name when the model leaves it unchanged", async () => {
+    const payload = { ...makeBasicPayload(), photoId: "photo-abc" };
+    const response = await POST(makeAPIContext(makeFormData(payload)));
+    const body = await response.json();
+    expect(body.subjectName).toBeUndefined();
+    expect(mockIdentificationsUpdate).toHaveBeenCalledWith({ description: body.description }, { count: "exact" });
+  });
+});
+
 // Risk 2.7 — description persist fails: answer still returned, no refund
 describe("Risk 2.7 — description persist failure does not affect the answer", () => {
   it("returns 200 with answer even when the description write fails", async () => {
@@ -141,6 +182,18 @@ describe("Risk 2.11 — AI failure triggers refund and returns 502", () => {
     server.use(http.post(OPENROUTER_URL, () => HttpResponse.error()));
     const response = await POST(makeAPIContext(makeFormData(makeBasicPayload())));
     expect(response.status).toBe(502);
+    expect(mockRpc).toHaveBeenCalledWith("refund_followup_usage", { p_period: expect.any(String) });
+  });
+});
+
+// Risk 2.11b — persistent upstream rate limit: refund called and 429 returned
+describe("Risk 2.11b — persistent upstream rate limit returns 429", () => {
+  it("refunds the slot and returns 429 when OpenRouter reports a sustained rate limit", async () => {
+    server.use(http.post(OPENROUTER_URL, () => HttpResponse.json(makeEmbeddedErrorResponse(429))));
+    const response = await POST(makeAPIContext(makeFormData(makeBasicPayload())));
+    expect(response.status).toBe(429);
+    const body = await response.json();
+    expect(body.error).toMatch(/try again/i);
     expect(mockRpc).toHaveBeenCalledWith("refund_followup_usage", { p_period: expect.any(String) });
   });
 });
