@@ -10,6 +10,7 @@ const {
   mockGetUser,
   mockStorageUpload,
   mockPhotoInsert,
+  mockPhotoMaybeSingle,
   mockIdentificationInsert,
   mockFolderSingle,
   mockFolderMaybeSingle,
@@ -17,6 +18,7 @@ const {
   mockGetUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-123" } }, error: null }),
   mockStorageUpload: vi.fn().mockResolvedValue({ data: {}, error: null }),
   mockPhotoInsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+  mockPhotoMaybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
   mockIdentificationInsert: vi.fn().mockResolvedValue({ data: null, error: null }),
   mockFolderSingle: vi.fn().mockResolvedValue({ data: { id: "folder-123", name: "Trips" }, error: null }),
   mockFolderMaybeSingle: vi.fn().mockResolvedValue({ data: { id: "unc-1" }, error: null }),
@@ -39,7 +41,17 @@ vi.mock("@/lib/supabase", () => ({
         chain.limit.mockReturnValue(chain);
         return chain;
       }
-      if (table === "photos") return { insert: mockPhotoInsert };
+      if (table === "photos") {
+        const chain = {
+          insert: mockPhotoInsert,
+          select: vi.fn(),
+          eq: vi.fn(),
+          maybeSingle: mockPhotoMaybeSingle,
+        };
+        chain.select.mockReturnValue(chain);
+        chain.eq.mockReturnValue(chain);
+        return chain;
+      }
       if (table === "identifications") return { insert: mockIdentificationInsert };
       return {};
     }),
@@ -52,6 +64,7 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
   mockStorageUpload.mockResolvedValue({ data: {}, error: null });
   mockPhotoInsert.mockResolvedValue({ data: null, error: null });
+  mockPhotoMaybeSingle.mockResolvedValue({ data: null, error: null });
   mockIdentificationInsert.mockResolvedValue({ data: null, error: null });
   mockFolderSingle.mockResolvedValue({ data: { id: "folder-123", name: "Trips" }, error: null });
   mockFolderMaybeSingle.mockResolvedValue({ data: { id: "unc-1" }, error: null });
@@ -114,6 +127,21 @@ describe("POST /api/archive/photos — save to archive", () => {
         description: "A neoclassical sculpture in New York Harbor.",
       }),
     );
+  });
+
+  it("dedupes a replayed save: a unique-violation returns the existing photoId with 200", async () => {
+    // Same requestId saved twice — the (user_id, request_id) index rejects the
+    // second insert; the route must return the original photo, not a 500.
+    mockPhotoInsert.mockResolvedValueOnce({ data: null, error: { code: "23505" } });
+    mockPhotoMaybeSingle.mockResolvedValueOnce({ data: { id: "existing-photo-1" }, error: null });
+
+    const response = await POST(makeAPIContext(makeFormData({ folderId: "folder-123" })));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.photoId).toBe("existing-photo-1");
+    // No identification row is written on a replay.
+    expect(mockIdentificationInsert).not.toHaveBeenCalled();
   });
 
   it("falls back to the default folder when none is supplied", async () => {

@@ -19,8 +19,8 @@ export const GET: APIRoute = apiRoute(async (context) => {
 // Commits an identification to the archive. Identification (POST /api/identify)
 // persists nothing; the image and its details only become a stored photo here,
 // when the user explicitly saves. Carries any follow-up enrichments the user
-// accepted, and the original requestId so a double-save is deduped by the
-// `(user_id, request_id)` unique index.
+// accepted, and the original requestId so a replayed save is deduped (idempotent)
+// via the `(user_id, request_id)` unique index — see persistPhotoAndIdentification.
 export const POST: APIRoute = apiRoute(async (context) => {
   const supabase = requireSupabaseClient(context);
   const user = await requireAuthenticatedUser(supabase);
@@ -28,17 +28,17 @@ export const POST: APIRoute = apiRoute(async (context) => {
   const { photo, thumbnail, subjectName, description, folderId, requestId } = await parseSaveRequest(context.request);
 
   const targetFolderId = await resolveFolder(supabase, user.id, folderId);
-  const photoId = crypto.randomUUID();
   const photoHash = await hashPhoto(photo);
 
-  await persistPhotoAndIdentification(
+  const { photoId, deduped } = await persistPhotoAndIdentification(
     supabase,
     user,
-    { photoId, requestId, photo, thumbnail, folderId: targetFolderId, photoHash },
+    { photoId: crypto.randomUUID(), requestId, photo, thumbnail, folderId: targetFolderId, photoHash },
     { recognised: true, subjectName, description },
   );
 
-  return Response.json({ photoId }, { status: 201 });
+  // 200 on a replayed save (idempotent), 201 when a new row was created.
+  return Response.json({ photoId }, { status: deduped ? 200 : 201 });
 });
 
 async function resolveFolder(supabase: SupabaseClient, userId: string, folderId: string | undefined): Promise<string> {

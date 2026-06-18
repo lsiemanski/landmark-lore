@@ -66,12 +66,33 @@ async function uploadThumbnailToStorage(
   return storagePath;
 }
 
+/** Find the photo previously saved under this `(user_id, request_id)`, if any. */
+async function findPhotoByRequestId(
+  supabase: SupabaseClient,
+  userId: string,
+  requestId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("photos")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("request_id", requestId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/**
+ * Persist one recognised photo. `deduped` is true when a row already existed for
+ * this `(user_id, request_id)` (a replayed save) — the `idx_photos_user_request_id`
+ * unique index makes the second insert a no-op and we return the original id
+ * instead of surfacing a 500, so a retried save is idempotent.
+ */
 export async function persistPhotoAndIdentification(
   supabase: SupabaseClient,
   user: { id: string },
   upload: PhotoUploadCommand,
   result: IdentificationResult,
-): Promise<void> {
+): Promise<{ photoId: string; deduped: boolean }> {
   // Storage upload that succeeds before a DB failure leaves an orphan object — accepted MVP risk.
   const storagePath = await uploadPhotoToStorage(supabase, user.id, upload.photoId, upload.photo);
   // A thumbnail is a cosmetic grid asset the gallery can live without (nullable column +
@@ -98,7 +119,15 @@ export async function persistPhotoAndIdentification(
     request_id: upload.requestId,
     status: PHOTO_STATUS_IDENTIFIED,
   });
-  if (photoError) throw new HttpError(500, { error: "Failed to save photo" });
+  if (photoError) {
+    // Replayed save: the (user_id, request_id) unique index rejected the insert.
+    // Return the original photo's id so a retried save is idempotent, not a 500.
+    if (photoError.code === "23505") {
+      const existingId = await findPhotoByRequestId(supabase, user.id, upload.requestId);
+      if (existingId) return { photoId: existingId, deduped: true };
+    }
+    throw new HttpError(500, { error: "Failed to save photo" });
+  }
 
   const { error: idError } = await supabase.from("identifications").insert({
     photo_id: upload.photoId,
@@ -106,4 +135,6 @@ export async function persistPhotoAndIdentification(
     description: result.description,
   });
   if (idError) throw new HttpError(500, { error: "Failed to save identification" });
+
+  return { photoId: upload.photoId, deduped: false };
 }
