@@ -53,8 +53,8 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 What's already in place in the codebase as of `2026-06-01` (auto-researched + user-confirmed).
 Foundations below assume these are present and do NOT re-scaffold them.
 
-- **Frontend:** present — Astro 6.3.1 + React 19 + TailwindCSS; auth UI components in `src/components/auth/`, dashboard page scaffolded at `src/pages/dashboard.astro`
-- **Backend / API:** present — Astro API routes for auth in `src/pages/api/auth/`; middleware in `src/middleware.ts` guards `/dashboard`
+- **Frontend:** present — Astro 6.3.1 + React 19 + TailwindCSS; auth UI components in `src/components/auth/`, app home at `src/pages/index.astro` (landing when signed out, identify dashboard when signed in)
+- **Backend / API:** present — Astro API routes for auth in `src/pages/api/auth/`; middleware in `src/middleware.ts` guards `/gallery`
 - **Data:** partial — Supabase client wired (`src/lib/supabase.ts`, `supabase/config.toml`); no schema or migration files present
 - **Auth:** present — Supabase Auth fully wired: `signInWithPassword()`, `signOut()`, `getUser()` in middleware; sessions via server-side cookies; sign-up, sign-in, and confirm-email pages present
 - **Deploy / infra:** present — Cloudflare Workers via `wrangler.jsonc`; GitHub Actions CI in `.github/workflows/ci.yml` (lint / build / deploy / preview jobs)
