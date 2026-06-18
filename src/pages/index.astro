@@ -1,8 +1,47 @@
 ---
-import Welcome from "@/components/Welcome.astro";
 import Layout from "@/layouts/Layout.astro";
+import UploadFlow from "@/components/identify/UploadFlow";
+import AccountMenu from "@/components/auth/AccountMenu";
+import Landing from "@/components/Landing.astro";
+
+const { user } = Astro.locals;
 ---
 
 <Layout>
-  <Welcome />
+  {
+    user ? (
+      <div class="bg-cosmic flex min-h-screen flex-col items-center p-4 pt-12">
+        <div class="w-full max-w-2xl">
+          <div class="relative z-10 mb-8 flex items-center justify-between">
+            <a
+              href="/"
+              class="bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-bold text-transparent"
+            >
+              Landmark Lore
+            </a>
+            <div class="flex items-center gap-3">
+              <a href="/gallery" class="text-sm text-white/60 transition-colors hover:text-white">
+                Gallery
+              </a>
+              <AccountMenu email={user.email ?? ""} client:only="react" />
+            </div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/10 p-8 text-white backdrop-blur-xl">
+            <UploadFlow client:only="react" />
+          </div>
+          <footer class="mt-6 text-center text-xs text-white/40">
+            <a href="/terms" class="transition-colors hover:text-white/70">
+              Terms
+            </a>{" "}
+            &middot;
+            <a href="/privacy" class="transition-colors hover:text-white/70">
+              Privacy
+            </a>
+          </footer>
+        </div>
+      </div>
+    ) : (
+      <Landing />
+    )
+  }
 </Layout>

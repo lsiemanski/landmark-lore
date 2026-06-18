@@ -17,6 +17,11 @@ const error = Astro.url.searchParams.get("error");
       <p class="mt-4 text-center text-sm text-blue-100/60">
         Already have an account? <a href="/auth/signin" class="text-purple-300 hover:underline">Sign in</a>
       </p>
+      <p class="mt-4 text-center text-xs text-blue-100/40">
+        By creating an account you agree to our
+        <a href="/terms" class="text-purple-300 hover:underline">Terms of Service</a> and
+        <a href="/privacy" class="text-purple-300 hover:underline">Privacy Policy</a>.
+      </p>
     </div>
   </div>
 </Layout>
