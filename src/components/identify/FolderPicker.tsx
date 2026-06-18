@@ -1,4 +1,5 @@
 import type { FolderWithCount } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 
 interface Props {
   folders: FolderWithCount[];
@@ -8,6 +9,12 @@ interface Props {
 }
 
 export default function FolderPicker({ folders, selectedFolderId, onChange, disabled }: Props) {
+  const sortedFolders = [...folders].sort((a, b) => {
+    const aDefault = a.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    const bDefault = b.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    return aDefault - bDefault;
+  });
+
   return (
     <div className="space-y-1">
       <label className="block text-sm font-medium text-gray-300">Save to folder</label>
@@ -19,7 +26,7 @@ export default function FolderPicker({ folders, selectedFolderId, onChange, disa
         disabled={disabled}
         className="w-full cursor-pointer rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {folders.map((f) => (
+        {sortedFolders.map((f) => (
           <option key={f.id} value={f.id} className="bg-gray-900 text-white">
             {f.name}
           </option>

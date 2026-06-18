@@ -7,6 +7,7 @@ import { FolderSidebar } from "./FolderSidebar";
 import { PhotoGrid } from "./PhotoGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorBanner } from "./ErrorBanner";
+import { SuccessToast } from "./SuccessToast";
 import { PhotoDetailModal } from "./PhotoDetailModal";
 
 export const ALL = "all";
@@ -27,6 +28,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const [folderRenaming, setFolderRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const renameCommitted = useRef(false);
 
   function selectFolder(id: SelectedFolder) {
@@ -53,6 +55,8 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
       }),
     );
     setAllPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, folderId: targetFolderId } : p)));
+    const targetName = folders.find((f) => f.id === targetFolderId)?.name ?? "folder";
+    setNotice(`Moved to "${targetName}"`);
   }
 
   function onPhotoDeleted(photoId: string) {
@@ -241,6 +245,13 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
         photo={selectedPhoto}
         onClose={() => {
           setSelectedPhoto(null);
+        }}
+      />
+
+      <SuccessToast
+        message={notice ?? ""}
+        onDismiss={() => {
+          setNotice(null);
         }}
       />
     </>

@@ -8,7 +8,7 @@ export const GET: APIRoute = apiRoute(async (context) => {
   const supabase = requireSupabaseClient(context);
   const user = await requireAuthenticatedUser(supabase);
   const folders = await listFolders(supabase, user.id);
-  return Response.json({ folders });
+  return Response.json({ folders }, { headers: { "Cache-Control": "private, no-store" } });
 });
 
 export const POST: APIRoute = apiRoute(async (context) => {

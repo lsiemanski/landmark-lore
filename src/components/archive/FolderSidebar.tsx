@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import type { FolderWithCount } from "@/lib/archive/folders";
+import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
 import { ALL, type SelectedFolder } from "./ArchiveView";
 
 interface Props {
@@ -16,6 +17,11 @@ export function FolderSidebar({ folders, selected, onSelect, onFolderCreated, on
   const [newName, setNewName] = useState("");
   const committed = useRef(false);
   const totalCount = folders.reduce((sum, f) => sum + f.photoCount, 0);
+  const sortedFolders = [...folders].sort((a, b) => {
+    const aDefault = a.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    const bDefault = b.name === DEFAULT_FOLDER_NAME ? 1 : 0;
+    return aDefault - bDefault;
+  });
 
   async function commitCreate() {
     if (committed.current) return;
@@ -58,7 +64,7 @@ export function FolderSidebar({ folders, selected, onSelect, onFolderCreated, on
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{totalCount}</span>
           </button>
         </li>
-        {folders.map((folder) => (
+        {sortedFolders.map((folder) => (
           <li key={folder.id}>
             <button
               type="button"
