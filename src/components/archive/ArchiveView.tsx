@@ -1,6 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
-import { Pencil, Trash2 } from "lucide-react";
-import { DEFAULT_FOLDER_NAME } from "@/lib/archive/constants";
+import { useState, useMemo, useCallback } from "react";
 import type { FolderWithCount } from "@/lib/archive/folders";
 import type { PhotoCardData } from "@/lib/archive/photos";
 import { FolderSidebar } from "./FolderSidebar";
@@ -25,11 +23,8 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoCardData | null>(null);
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string | null>(null);
   const [pendingDeletePhoto, setPendingDeletePhoto] = useState<string | null>(null);
-  const [folderRenaming, setFolderRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const renameCommitted = useRef(false);
 
   // Stable identity so SuccessToast's auto-dismiss timer isn't reset by an
   // unrelated re-render of this view during the toast's lifetime.
@@ -39,15 +34,12 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
 
   function selectFolder(id: SelectedFolder) {
     setSelectedFolder(id);
-    setFolderRenaming(false);
   }
 
   const photos = useMemo(
     () => (selectedFolder === ALL ? allPhotos : allPhotos.filter((p) => p.folderId === selectedFolder)),
     [allPhotos, selectedFolder],
   );
-
-  const activeFolder = selectedFolder !== ALL ? (folders.find((f) => f.id === selectedFolder) ?? null) : null;
 
   function onPhotoMoved(photoId: string, targetFolderId: string) {
     const photo = allPhotos.find((p) => p.id === photoId);
@@ -83,26 +75,6 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
     setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name: newName } : f)));
   }
 
-  async function commitRename() {
-    if (renameCommitted.current) return;
-    renameCommitted.current = true;
-    setFolderRenaming(false);
-    if (!activeFolder) return;
-    const trimmed = renameDraft.trim();
-    if (!trimmed || trimmed === activeFolder.name) return;
-    try {
-      const res = await fetch(`/api/archive/folders/${activeFolder.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
-      });
-      if (res.ok) onFolderRenamed(activeFolder.id, trimmed);
-      else setError("Couldn't rename the folder. Please try again.");
-    } catch {
-      setError("Couldn't rename the folder. Please try again.");
-    }
-  }
-
   async function confirmDeleteFolder() {
     if (!pendingDeleteFolder) return;
     const id = pendingDeleteFolder;
@@ -131,8 +103,6 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
     }
   }
 
-  const isProtected = activeFolder?.name === DEFAULT_FOLDER_NAME;
-  const canDelete = (activeFolder?.photoCount ?? 0) === 0;
   const pendingFolderName = pendingDeleteFolder
     ? (folders.find((f) => f.id === pendingDeleteFolder)?.name ?? "this folder")
     : "";
@@ -151,63 +121,11 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
           selected={selectedFolder}
           onSelect={selectFolder}
           onFolderCreated={onFolderCreated}
+          onFolderRenamed={onFolderRenamed}
+          onRequestDelete={setPendingDeleteFolder}
           onError={setError}
         />
         <div className="flex-1">
-          {activeFolder && !isProtected && (
-            <div className="mb-4 flex items-center justify-end gap-2">
-              {folderRenaming ? (
-                <input
-                  autoFocus
-                  value={renameDraft}
-                  onChange={(e) => {
-                    setRenameDraft(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      void commitRename();
-                    }
-                    if (e.key === "Escape") setFolderRenaming(false);
-                  }}
-                  onBlur={() => {
-                    void commitRename();
-                  }}
-                  aria-label={`Rename ${activeFolder.name}`}
-                  className="rounded bg-white/10 px-2 py-1 text-sm font-medium text-white outline-none"
-                />
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      renameCommitted.current = false;
-                      setRenameDraft(activeFolder.name);
-                      setFolderRenaming(true);
-                    }}
-                    aria-label={`Rename ${activeFolder.name}`}
-                    className="cursor-pointer rounded p-1 text-white/30 transition-colors hover:text-white"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={
-                      canDelete
-                        ? () => {
-                            setPendingDeleteFolder(activeFolder.id);
-                          }
-                        : undefined
-                    }
-                    aria-disabled={!canDelete}
-                    aria-label={`Delete ${activeFolder.name}`}
-                    className={`rounded p-1 text-white/30 transition-colors ${canDelete ? "cursor-pointer hover:text-red-400" : "cursor-not-allowed opacity-40"}`}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
           <PhotoGrid
             photos={photos}
             folders={folders}
