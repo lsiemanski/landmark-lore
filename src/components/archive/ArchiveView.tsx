@@ -154,8 +154,8 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
           onError={setError}
         />
         <div className="flex-1">
-          {activeFolder && (
-            <div className="mb-4 flex items-center gap-2">
+          {activeFolder && !isProtected && (
+            <div className="mb-4 flex items-center justify-end gap-2">
               {folderRenaming ? (
                 <input
                   autoFocus
@@ -172,12 +172,10 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
                   onBlur={() => {
                     void commitRename();
                   }}
+                  aria-label={`Rename ${activeFolder.name}`}
                   className="rounded bg-white/10 px-2 py-1 text-sm font-medium text-white outline-none"
                 />
               ) : (
-                <h2 className="text-sm font-medium text-white">{activeFolder.name}</h2>
-              )}
-              {!isProtected && !folderRenaming && (
                 <>
                   <button
                     type="button"
