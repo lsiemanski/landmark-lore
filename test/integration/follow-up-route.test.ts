@@ -76,6 +76,33 @@ describe("Risk 2.5 — authenticated request returns 200 with answer", () => {
   });
 });
 
+// Risk 2.5b — pre-save (no photoId): enrichments echoed for the on-screen
+// result even though nothing is persisted yet. Regression: the echo was once
+// gated on photoId, so a "change the subject" before Save updated nothing.
+describe("Risk 2.5b — request without a photoId still echoes enrichments", () => {
+  it("returns description and subjectName without persisting", async () => {
+    server.use(
+      http.post(OPENROUTER_URL, () =>
+        HttpResponse.json(
+          makeCompletionResponse(
+            JSON.stringify({
+              answer: "It's actually the Statue of Liberty.",
+              enrichedDescription: "The Statue of Liberty, a neoclassical sculpture in New York Harbor.",
+              updatedSubjectName: "Statue of Liberty",
+            }),
+          ),
+        ),
+      ),
+    );
+    const response = await POST(makeAPIContext(makeFormData(makeBasicPayload())));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.description).toBe("The Statue of Liberty, a neoclassical sculpture in New York Harbor.");
+    expect(body.subjectName).toBe("Statue of Liberty");
+    expect(mockIdentificationsUpdate).not.toHaveBeenCalled();
+  });
+});
+
 // Risk 2.6 — recognized: enriched description persisted and returned
 describe("Risk 2.6 — recognized request persists and returns enriched description", () => {
   it("persists enriched description and returns it as description field", async () => {

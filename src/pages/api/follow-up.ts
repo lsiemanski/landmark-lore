@@ -40,9 +40,13 @@ async function followUp(supabase: SupabaseClient, request: Request, apiKey: stri
     }
   }
 
+  // Echo enrichments back to the client regardless of photoId: updating the
+  // on-screen result is pure client state. Persistence above is what needs a
+  // photoId; before Save there is no row yet, and the corrected name rides
+  // along in client state into the eventual Save.
   const body: Record<string, unknown> = { answer };
-  if (photoId && description) body.description = description;
-  if (photoId && subjectName) body.subjectName = subjectName;
+  if (description) body.description = description;
+  if (subjectName) body.subjectName = subjectName;
   return Response.json(body);
 }
 
