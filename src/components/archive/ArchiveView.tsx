@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { Menu, X } from "lucide-react";
 import type { FolderWithCount } from "@/lib/archive/folders";
 import type { PhotoCardData } from "@/lib/archive/photos";
 import { FolderSidebar } from "./FolderSidebar";
@@ -25,6 +26,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const [pendingDeletePhoto, setPendingDeletePhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Stable identity so SuccessToast's auto-dismiss timer isn't reset by an
   // unrelated re-render of this view during the toast's lifetime.
@@ -34,6 +36,7 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
 
   function selectFolder(id: SelectedFolder) {
     setSelectedFolder(id);
+    setSidebarOpen(false);
   }
 
   const photos = useMemo(
@@ -106,6 +109,8 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
   const pendingFolderName = pendingDeleteFolder
     ? (folders.find((f) => f.id === pendingDeleteFolder)?.name ?? "this folder")
     : "";
+  const currentFolderLabel =
+    selectedFolder === ALL ? "All photos" : (folders.find((f) => f.id === selectedFolder)?.name ?? "All photos");
 
   return (
     <>
@@ -115,17 +120,63 @@ export default function ArchiveView({ initialFolders, initialPhotos }: Props) {
           setError(null);
         }}
       />
-      <div className="flex gap-6">
-        <FolderSidebar
-          folders={folders}
-          selected={selectedFolder}
-          onSelect={selectFolder}
-          onFolderCreated={onFolderCreated}
-          onFolderRenamed={onFolderRenamed}
-          onRequestDelete={setPendingDeleteFolder}
-          onError={setError}
-        />
-        <div className="flex-1">
+      <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+        {/* Mobile: a hamburger reveals the folder menu as a drawer; on md+ the
+            sidebar is a static column and these mobile-only pieces are hidden. */}
+        <div className="flex items-center gap-3 md:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(true);
+            }}
+            aria-label="Open folder menu"
+            aria-expanded={sidebarOpen}
+            className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-2 text-white transition-colors hover:bg-white/10"
+          >
+            <Menu className="size-5" />
+          </button>
+          <span className="truncate text-sm font-medium text-white">{currentFolderLabel}</span>
+        </div>
+
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/60 md:hidden"
+            onClick={() => {
+              setSidebarOpen(false);
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <div
+          className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto bg-[#0f1117] p-4 transition-transform duration-200 md:static md:z-auto md:w-auto md:shrink-0 md:overflow-visible md:bg-transparent md:p-0 md:transition-none ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
+        >
+          <div className="mb-2 flex justify-end md:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setSidebarOpen(false);
+              }}
+              aria-label="Close folder menu"
+              className="cursor-pointer rounded p-1 text-white/50 transition-colors hover:text-white"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+          <FolderSidebar
+            folders={folders}
+            selected={selectedFolder}
+            onSelect={selectFolder}
+            onFolderCreated={onFolderCreated}
+            onFolderRenamed={onFolderRenamed}
+            onRequestDelete={setPendingDeleteFolder}
+            onError={setError}
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
           <PhotoGrid
             photos={photos}
             folders={folders}

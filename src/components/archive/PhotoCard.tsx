@@ -83,7 +83,7 @@ export function PhotoCard({ photo, folders, onSelect, onMoved, onDeleted, onErro
       <div className="flex items-start justify-between p-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-white">{photo.subjectName}</p>
-          <p className="text-xs text-white/40">{date}</p>
+          <p className="hidden text-xs text-white/40 sm:block">{date}</p>
         </div>
         <div ref={menuRef} className="relative ml-1 shrink-0">
           <button
