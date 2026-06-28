@@ -2,6 +2,9 @@
   "name": "10x-astro-starter",
   "type": "module",
   "version": "0.0.1",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

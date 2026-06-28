@@ -268,12 +268,12 @@ No `ReviewerAgentUIMessage` / `InferAgentUIMessage` export — the package has n
 
 #### Automated
 
-- [ ] 1.1 `npm install` exits 0
-- [ ] 1.2 `npm ls @landmark-lore/code-reviewer` shows package linked
+- [x] 1.1 `npm install` exits 0
+- [x] 1.2 `npm ls @landmark-lore/code-reviewer` shows package linked
 
 #### Manual
 
-- [ ] 1.3 `node_modules/@landmark-lore/code-reviewer` symlink resolves to `packages/code-reviewer`
+- [x] 1.3 `node_modules/@landmark-lore/code-reviewer` symlink resolves to `packages/code-reviewer`
 
 ### Phase 2: Module Files
 
