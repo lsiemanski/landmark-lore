@@ -1,10 +1,10 @@
 ---
 change_id: tool-loop-agent
 title: Tool loop agent
-status: impl_reviewed
+status: archived
 created: 2026-06-28
 updated: 2026-06-28
-archived_at: null
+archived_at: 2026-06-28T12:44:28Z
 ---
 
 ## Notes
