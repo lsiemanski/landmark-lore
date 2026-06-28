@@ -1,0 +1,17 @@
+{
+  "name": "@landmark-lore/code-reviewer",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@openrouter/ai-sdk-provider": "*",
+    "ai": "*",
+    "zod": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "tsx": "*"
+  }
+}
