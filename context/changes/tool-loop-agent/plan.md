@@ -279,11 +279,11 @@ No `ReviewerAgentUIMessage` / `InferAgentUIMessage` export — the package has n
 
 #### Automated
 
-- [x] 2.1 `npx tsc --noEmit -p packages/code-reviewer/tsconfig.json` passes with zero errors
-- [x] 2.2 `npm run lint` passes for `packages/` files
+- [x] 2.1 `npx tsc --noEmit -p packages/code-reviewer/tsconfig.json` passes with zero errors — 499b095
+- [x] 2.2 `npm run lint` passes for `packages/` files — 499b095
 
 #### Manual
 
-- [x] 2.3 Smoke test: scratch script returns typed `Review` with valid `verdict` and five numeric scores
-- [x] 2.4 `output.summary` is non-empty Markdown text
-- [x] 2.5 Bad diff: `securitySafety` drops noticeably and `verdict` is `"fail"` vs. clean diff
+- [x] 2.3 Smoke test: scratch script returns typed `Review` with valid `verdict` and five numeric scores — 499b095
+- [x] 2.4 `output.summary` is non-empty Markdown text — 499b095
+- [x] 2.5 Bad diff: `securitySafety` drops noticeably and `verdict` is `"fail"` vs. clean diff — 499b095
