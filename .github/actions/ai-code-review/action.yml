@@ -1,0 +1,134 @@
+name: AI Code Review
+description: Runs AI code review on a pull request, posts a scores comment, and applies a pass/fail label.
+
+inputs:
+  pr-title:
+    description: Pull request title
+    required: true
+  pr-body:
+    description: Pull request body (may be empty)
+    required: true
+  base-sha:
+    description: Base commit SHA for the diff
+    required: true
+  head-sha:
+    description: Head commit SHA for the diff
+    required: true
+  pr-number:
+    description: Pull request number
+    required: true
+  openrouter-api-key:
+    description: OpenRouter API key for the AI review
+    required: true
+  github-token:
+    description: GitHub token for posting comments and managing labels
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create labels (idempotent)
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const labels = [
+            { name: 'ai-cr:passed', color: '0e8a16', description: 'AI code review passed' },
+            { name: 'ai-cr:failed', color: 'b60205', description: 'AI code review failed' },
+            { name: 'ai-cr:review', color: 'e4e669', description: 'Request AI code review' },
+          ];
+          for (const label of labels) {
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ...label,
+              });
+            } catch (err) {
+              if (err.status !== 422) throw err;
+            }
+          }
+
+    - name: Remove previous result labels
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const prNumber = Number('${{ inputs.pr-number }}');
+          for (const labelName of ['ai-cr:passed', 'ai-cr:failed', 'ai-cr:review']) {
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: labelName,
+              });
+            } catch (err) {
+              if (err.status !== 404) throw err;
+            }
+          }
+
+    - name: Generate diff
+      shell: bash
+      run: |
+        git diff ${{ inputs.base-sha }}...${{ inputs.head-sha }} -- . ':(exclude)package-lock.json' > /tmp/pr.diff
+
+    - id: review
+      name: Run AI review
+      continue-on-error: true
+      shell: bash
+      env:
+        OPENROUTER_API_KEY: ${{ inputs.openrouter-api-key }}
+        PR_TITLE: ${{ inputs.pr-title }}
+        PR_BODY: ${{ inputs.pr-body }}
+        PR_DIFF_FILE: /tmp/pr.diff
+        REVIEW_OUTPUT_FILE: /tmp/review.json
+      run: npx tsx scripts/review-pr.ts
+
+    - name: Post comment and apply label
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const prNumber = Number('${{ inputs.pr-number }}');
+          const { owner, repo } = context.repo;
+
+          if ('${{ steps.review.outcome }}' !== 'success') {
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: '<!-- ai-code-review -->\n## AI Code Review\n\n❌ Review failed. Check the workflow logs for details.',
+            });
+            throw new Error('AI review step failed');
+          }
+
+          const fs = require('fs');
+          const review = JSON.parse(fs.readFileSync('/tmp/review.json', 'utf-8'));
+          const passed = review.verdict === 'pass';
+          const verdictIcon = passed ? '✅ PASSED' : '❌ FAILED';
+
+          const body = [
+            '<!-- ai-code-review -->',
+            '## AI Code Review',
+            '',
+            '| Criterion | Score |',
+            '|-----------|-------|',
+            `| Correctness | ${review.correctness}/10 |`,
+            `| Security & Safety | ${review.securitySafety}/10 |`,
+            `| Readability | ${review.readability}/10 |`,
+            `| Performance | ${review.performance}/10 |`,
+            `| Test Coverage | ${review.testCoverage}/10 |`,
+            '',
+            `**Verdict: ${verdictIcon}**`,
+            '',
+            review.summary,
+          ].join('\n');
+
+          await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+          await github.rest.issues.addLabels({
+            owner,
+            repo,
+            issue_number: prNumber,
+            labels: [passed ? 'ai-cr:passed' : 'ai-cr:failed'],
+          });

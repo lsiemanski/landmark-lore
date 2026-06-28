@@ -279,8 +279,8 @@ No edit is expected unless drift is found.
 
 #### Automated
 
-- [ ] 1.1 ESLint passes: `eslint scripts/review-pr.ts`
-- [ ] 1.2 TypeScript type check passes on `scripts/review-pr.ts`
+- [x] 1.1 ESLint passes: `eslint scripts/review-pr.ts`
+- [x] 1.2 TypeScript type check passes on `scripts/review-pr.ts`
 
 #### Manual
 
@@ -292,7 +292,7 @@ No edit is expected unless drift is found.
 
 #### Automated
 
-- [ ] 2.1 YAML syntax valid for `.github/actions/ai-code-review/action.yml`
+- [x] 2.1 YAML syntax valid for `.github/actions/ai-code-review/action.yml`
 
 #### Manual
 
@@ -305,7 +305,7 @@ No edit is expected unless drift is found.
 
 #### Automated
 
-- [ ] 3.1 YAML syntax valid for `.github/workflows/code-review.yml`
+- [x] 3.1 YAML syntax valid for `.github/workflows/code-review.yml`
 - [ ] 3.2 `gh workflow list` shows AI Code Review workflow
 
 #### Manual
