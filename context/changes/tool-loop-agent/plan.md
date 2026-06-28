@@ -268,22 +268,22 @@ No `ReviewerAgentUIMessage` / `InferAgentUIMessage` export — the package has n
 
 #### Automated
 
-- [x] 1.1 `npm install` exits 0
-- [x] 1.2 `npm ls @landmark-lore/code-reviewer` shows package linked
+- [x] 1.1 `npm install` exits 0 — 3375728
+- [x] 1.2 `npm ls @landmark-lore/code-reviewer` shows package linked — 3375728
 
 #### Manual
 
-- [x] 1.3 `node_modules/@landmark-lore/code-reviewer` symlink resolves to `packages/code-reviewer`
+- [x] 1.3 `node_modules/@landmark-lore/code-reviewer` symlink resolves to `packages/code-reviewer` — 3375728
 
 ### Phase 2: Module Files
 
 #### Automated
 
-- [ ] 2.1 `npx tsc --noEmit -p packages/code-reviewer/tsconfig.json` passes with zero errors
-- [ ] 2.2 `npm run lint` passes for `packages/` files
+- [x] 2.1 `npx tsc --noEmit -p packages/code-reviewer/tsconfig.json` passes with zero errors
+- [x] 2.2 `npm run lint` passes for `packages/` files
 
 #### Manual
 
-- [ ] 2.3 Smoke test: scratch script returns typed `Review` with valid `verdict` and five numeric scores
-- [ ] 2.4 `output.summary` is non-empty Markdown text
-- [ ] 2.5 Bad diff: `securitySafety` drops noticeably and `verdict` is `"fail"` vs. clean diff
+- [x] 2.3 Smoke test: scratch script returns typed `Review` with valid `verdict` and five numeric scores
+- [x] 2.4 `output.summary` is non-empty Markdown text
+- [x] 2.5 Bad diff: `securitySafety` drops noticeably and `verdict` is `"fail"` vs. clean diff
