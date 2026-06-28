@@ -305,7 +305,7 @@ No edit is expected unless drift is found.
 
 #### Automated
 
-- [x] 3.1 YAML syntax valid for `.github/workflows/code-review.yml`
+- [x] 3.1 YAML syntax valid for `.github/workflows/code-review.yml` — dc1935d
 - [ ] 3.2 `gh workflow list` shows AI Code Review workflow
 
 #### Manual
